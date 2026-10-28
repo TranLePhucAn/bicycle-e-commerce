@@ -1,122 +1,105 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect } from 'react';
 
 function App() {
-  const [count, setCount] = useState(0)
+  useEffect(() => {
+    const $ = (window as any).$;
+
+    // Khởi tạo DataTables
+    if ($ && $.fn.DataTable) {
+      if ($.fn.DataTable.isDataTable('#bicycleTable')) {
+        $('#bicycleTable').DataTable().destroy();
+      }
+
+      // Kích hoạt DataTables
+      $('#bicycleTable').DataTable({
+        language: {
+          search: '🔍 Tìm kiếm xe đạp:',
+          lengthMenu: 'Hiển thị _MENU_ xe mỗi trang',
+          info: 'Đang hiển thị _START_ đến _END_ trong tổng số _TOTAL_ xe',
+          paginate: {
+            first: 'Đầu',
+            last: 'Cuối',
+            next: 'Tiếp ➡️',
+            previous: '⬅️ Trước',
+          },
+        },
+      });
+    }
+  }, []);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+      <div className="container py-4">
+        <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+          <h2 className="text-primary fw-bold">🚲 Bicycle E-Commerce Management</h2>
+          <span className="badge bg-success p-2 fs-6">Bootstrap + jQuery + DataTables (Offline)</span>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        {/* Bảng danh sách xe đạp sử dụng DataTables */}
+        <div className="card shadow-sm">
+          <div className="card-header bg-dark text-white fw-semibold">
+            Danh Sách Xe Đạp Trong Cửa Hàng
+          </div>
+          <div className="card-body">
+            <div className="table-responsive">
+              <table id="bicycleTable" className="table table-striped table-bordered align-middle">
+                <thead className="table-secondary">
+                <tr>
+                  <th>Mã Xe</th>
+                  <th>Tên Xe Đạp</th>
+                  <th>Loại Xe</th>
+                  <th>Giá Bán (VNĐ)</th>
+                  <th>Số Lượng Kho</th>
+                  <th>Trạng Thái</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                  <td>BK-001</td>
+                  <td>Xe đạp địa hình MTB Giant ATX</td>
+                  <td>Địa hình (MTB)</td>
+                  <td>8,500,000</td>
+                  <td>15</td>
+                  <td><span className="badge bg-success">Còn hàng</span></td>
+                </tr>
+                <tr>
+                  <td>BK-002</td>
+                  <td>Xe đạp đua Road Twitter R10</td>
+                  <td>Đua (Road)</td>
+                  <td>14,200,000</td>
+                  <td>8</td>
+                  <td><span className="badge bg-success">Còn hàng</span></td>
+                </tr>
+                <tr>
+                  <td>BK-003</td>
+                  <td>Xe đạp đường phố Touring Trinx Free</td>
+                  <td>Đường phố (Touring)</td>
+                  <td>5,800,000</td>
+                  <td>20</td>
+                  <td><span className="badge bg-success">Còn hàng</span></td>
+                </tr>
+                <tr>
+                  <td>BK-004</td>
+                  <td>Xe đạp gấp Fornix Prava</td>
+                  <td>Gấp gọn</td>
+                  <td>4,100,000</td>
+                  <td>5</td>
+                  <td><span className="badge bg-warning text-dark">Sắp hết</span></td>
+                </tr>
+                <tr>
+                  <td>BK-005</td>
+                  <td>Xe đạp fixed gear Single Speed</td>
+                  <td>Fixed Gear</td>
+                  <td>3,500,000</td>
+                  <td>0</td>
+                  <td><span className="badge bg-danger">Hết hàng</span></td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      </div>
+  );
 }
 
-export default App
+export default App;
