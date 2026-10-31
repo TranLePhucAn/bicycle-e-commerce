@@ -6,6 +6,7 @@ import './App.css'
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Hero from './components/layout/Hero';
+import ProductList from "./components/home/ProductList.js";
 
 function App() {
   const [count, setCount] = useState(0)
@@ -126,6 +127,10 @@ function App() {
             <div className="app-container">
                 <Hero />
             </div>
+
+            <main className="flex-grow-1">
+                <ProductList />
+            </main>
 
             <Footer />
         </div>
