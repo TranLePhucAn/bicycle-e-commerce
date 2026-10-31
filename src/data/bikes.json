@@ -3,7 +3,7 @@
     "id": "BK-001",
     "name": "Giant ATX",
     "category": "Xe địa hình (MTB)",
-    "image": "bike01.png",
+    "image": "bike-01.jpg",
     "price": 8500000,
     "stock": 15,
     "status": "Còn hàng"
@@ -12,7 +12,7 @@
     "id": "BK-002",
     "name": "Twitter R10",
     "category": "Xe đạp đua",
-    "image": "bike02.png",
+    "image": "bike-02.jpg",
     "price": 14200000,
     "stock": 8,
     "status": "Còn hàng"
@@ -21,7 +21,7 @@
     "id": "BK-003",
     "name": "Trinx Free",
     "category": "Xe đường phố (Touring)",
-    "image": "bike03.png",
+    "image": "bike-03.jpg",
     "price": 5800000,
     "stock": 20,
     "status": "Còn hàng"
@@ -30,7 +30,7 @@
     "id": "BK-004",
     "name": "Fornix Prava",
     "category": "Xe đạp gấp",
-    "image": "bike04.png",
+    "image": "bike-04.jpg",
     "price": 4100000,
     "stock": 5,
     "status": "Sắp hết"
@@ -39,7 +39,7 @@
     "id": "BK-005",
     "name": "City Classic 26",
     "category": "Cổ điển",
-    "image": "bike05.png",
+    "image": "bike-05.jpg",
     "price": 4500000,
     "stock": 4,
     "status": "Còn hàng"
@@ -48,7 +48,7 @@
     "id": "BK-006",
     "name": "Giant XTC SLR 29",
     "category": "Xe địa hình (MTB)",
-    "image": "bike06.png",
+    "image": "bike-06.jpg",
     "price": 18900000,
     "stock": 6,
     "status": "Còn hàng"
@@ -57,7 +57,7 @@
     "id": "BK-007",
     "name": "Trek Marlin 5",
     "category": "Xe địa hình (MTB)",
-    "image": "bike07.png",
+    "image": "bike-07.jpg",
     "price": 16500000,
     "stock": 4,
     "status": "Sắp hết"
@@ -66,7 +66,7 @@
     "id": "BK-008",
     "name": "Giant Escape 2 Disc",
     "category": "Xe đạp Hybrid",
-    "image": "bike08.png",
+    "image": "bike-08.jpg",
     "price": 12900000,
     "stock": 11,
     "status": "Còn hàng"
@@ -75,7 +75,7 @@
     "id": "BK-009",
     "name": "Specialized Allez",
     "category": "Xe đạp đua",
-    "image": "bike09.png",
+    "image": "bike-09.jpg",
     "price": 24500000,
     "stock": 3,
     "status": "Sắp hết"
@@ -84,7 +84,7 @@
     "id": "BK-010",
     "name": "Cannondale CAAD Optimo 4",
     "category": "Xe đạp đua",
-    "image": "bike10.png",
+    "image": "bike-10.jpg",
     "price": 27900000,
     "stock": 7,
     "status": "Còn hàng"
@@ -93,7 +93,7 @@
     "id": "BK-011",
     "name": "Giant Explore E+ 2",
     "category": "Xe đạp điện trợ lực",
-    "image": "bike11.png",
+    "image": "bike-11.jpg",
     "price": 32900000,
     "stock": 3,
     "status": "Sắp hết"
@@ -102,7 +102,7 @@
     "id": "BK-012",
     "name": "Giant Escape 3",
     "category": "Xe đường phố (Touring)",
-    "image": "bike12.png",
+    "image": "bike-12.jpg",
     "price": 8900000,
     "stock": 9,
     "status": "Còn hàng"
@@ -111,16 +111,16 @@
     "id": "BK-013",
     "name": "Trek FX 1 Disc",
     "category": "Xe đường phố (Touring)",
-    "image": "bike13.png",
+    "image": "bike-13.jpg",
     "price": 11900000,
     "stock": 6,
     "status": "Còn hàng"
   },
   {
     "id": "BK-014",
-    "name": "E-Bike Gấp A20",
+    "name": "E-Bike Gấp 20",
     "category": "Xe đạp điện",
-    "image": "bike14.png",
+    "image": "bike-14.jpg",
     "price": 6900000,
     "stock": 2,
     "status": "Sắp hết"
@@ -129,7 +129,7 @@
     "id": "BK-015",
     "name": "Dahon SUV D6",
     "category": "Xe đạp gấp",
-    "image": "bike15.png",
+    "image": "bike-15.jpg",
     "price": 9500000,
     "stock": 10,
     "status": "Còn hàng"
@@ -138,7 +138,7 @@
     "id": "BK-016",
     "name": "Classic Lady 26",
     "category": "Cổ điển",
-    "image": "bike16.png",
+    "image": "bike-16.jpg",
     "price": 4200000,
     "stock": 14,
     "status": "Còn hàng"
@@ -147,7 +147,7 @@
     "id": "BK-017",
     "name": "Giant Explore E+ 1",
     "category": "Xe đạp điện trợ lực",
-    "image": "bike17.png",
+    "image": "bike-17.jpg",
     "price": 39900000,
     "stock": 5,
     "status": "Sắp hết"
@@ -156,7 +156,7 @@
     "id": "BK-018",
     "name": "Twitter Gravel GR02",
     "category": "Xe đạp Hybrid",
-    "image": "bike18.png",
+    "image": "bike-18.jpg",
     "price": 17900000,
     "stock": 4,
     "status": "Sắp hết"
@@ -165,7 +165,7 @@
     "id": "BK-019",
     "name": "Merida Silex 200",
     "category": "Xe đạp Hybrid",
-    "image": "bike19.png",
+    "image": "bike-19.jpg",
     "price": 23900000,
     "stock": 2,
     "status": "Sắp hết"
@@ -174,7 +174,7 @@
     "id": "BK-020",
     "name": "City E-Bike 350",
     "category": "Xe đạp điện",
-    "image": "bike20.png",
+    "image": "bike-20.jpg",
     "price": 18900000,
     "stock": 0,
     "status": "Hết hàng"
