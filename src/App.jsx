@@ -5,6 +5,7 @@ import viteLogo from './assets/vite.svg'
 import './App.css'
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+import Hero from './components/layout/Hero';
 
 function App() {
   const [count, setCount] = useState(0)
@@ -122,9 +123,9 @@ function App() {
 
             <Navbar />
 
-            <main className="flex-fill container my-4">
-                <h2 className="text-center">Chào mừng đến với cửa hàng bán xe đạp</h2>
-            </main>
+            <div className="app-container">
+                <Hero />
+            </div>
 
             <Footer />
         </div>
