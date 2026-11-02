@@ -1,141 +1,84 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import './App.css';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Hero from './components/layout/Hero';
-import ProductList from "./components/home/ProductList.js";
+import ProductList from './components/home/ProductList';
+import Cart from './components/cart/Cart';
+import OrderHistory from './components/history/OrderHistory';
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Quản lý tab hiện tại: 'home' | 'cart' | 'history'
+  const [currentTab, setCurrentTab] = useState('home');
 
   return (
-    <>
-      {/*<section id="center">*/}
-      {/*  <div className="hero">*/}
-      {/*    <img src={heroImg} className="base" width="170" height="179" alt="" />*/}
-      {/*    <img src={reactLogo} className="framework" alt="React logo" />*/}
-      {/*    <img src={viteLogo} className="vite" alt="Vite logo" />*/}
-      {/*  </div>*/}
-      {/*  <div>*/}
-      {/*    <h1>Get started</h1>*/}
-      {/*    <p>*/}
-      {/*      Edit <code>src/App.jsx</code> and save to test <code>HMR</code>*/}
-      {/*    </p>*/}
-      {/*  </div>*/}
-      {/*  <button*/}
-      {/*    type="button"*/}
-      {/*    className="counter"*/}
-      {/*    onClick={() => setCount((count) => count + 1)}*/}
-      {/*  >*/}
-      {/*    Count is {count}*/}
-      {/*  </button>*/}
-      {/*</section>*/}
+    <div className="d-flex flex-column min-vh-100 bg-light">
+      {/* 1. Header & Navigation (hỗ trợ chuyển tab qua props) */}
+      <Navbar currentTab={currentTab} onSelectTab={setCurrentTab} cartCount={2} />
 
-      {/*<div className="ticks"></div>*/}
+      {/* 2. Thanh điều hướng tab nhanh (Quick Tab Pills) */}
+      <div className="bg-white border-bottom shadow-sm py-2">
+        <div className="container d-flex justify-content-between align-items-center">
+          <div className="nav nav-pills gap-2">
+            <button
+              type="button"
+              className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold ${
+                currentTab === 'home' ? 'btn-primary' : 'btn-outline-secondary'
+              }`}
+              onClick={() => setCurrentTab('home')}
+            >
+              <i className="fa-solid fa-house me-1"></i> Trang chủ
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold ${
+                currentTab === 'cart' ? 'btn-primary' : 'btn-outline-secondary'
+              }`}
+              onClick={() => setCurrentTab('cart')}
+            >
+              <i className="fa-solid fa-cart-shopping me-1"></i> Giỏ hàng
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold ${
+                currentTab === 'history' ? 'btn-primary' : 'btn-outline-secondary'
+              }`}
+              onClick={() => setCurrentTab('history')}
+            >
+              <i className="fa-solid fa-clock-rotate-left me-1"></i> Lịch sử đơn hàng
+            </button>
+          </div>
 
-      {/*<section id="next-steps">*/}
-      {/*  <div id="docs">*/}
-      {/*    <svg className="icon" role="presentation" aria-hidden="true">*/}
-      {/*      <use href="/icons.svg#documentation-icon"></use>*/}
-      {/*    </svg>*/}
-      {/*    <h2>Documentation</h2>*/}
-      {/*    <p>Your questions, answered</p>*/}
-      {/*    <ul>*/}
-      {/*      <li>*/}
-      {/*        <a href="https://vite.dev/" target="_blank">*/}
-      {/*          <img className="logo" src={viteLogo} alt="" />*/}
-      {/*          Explore Vite*/}
-      {/*        </a>*/}
-      {/*      </li>*/}
-      {/*      <li>*/}
-      {/*        <a href="https://react.dev/" target="_blank">*/}
-      {/*          <img className="button-icon" src={reactLogo} alt="" />*/}
-      {/*          Learn more*/}
-      {/*        </a>*/}
-      {/*      </li>*/}
-      {/*    </ul>*/}
-      {/*  </div>*/}
-      {/*  <div id="social">*/}
-      {/*    <svg className="icon" role="presentation" aria-hidden="true">*/}
-      {/*      <use href="/icons.svg#social-icon"></use>*/}
-      {/*    </svg>*/}
-      {/*    <h2>Connect with us</h2>*/}
-      {/*    <p>Join the Vite community</p>*/}
-      {/*    <ul>*/}
-      {/*      <li>*/}
-      {/*        <a href="https://github.com/vitejs/vite" target="_blank">*/}
-      {/*          <svg*/}
-      {/*            className="button-icon"*/}
-      {/*            role="presentation"*/}
-      {/*            aria-hidden="true"*/}
-      {/*          >*/}
-      {/*            <use href="/icons.svg#github-icon"></use>*/}
-      {/*          </svg>*/}
-      {/*          GitHub*/}
-      {/*        </a>*/}
-      {/*      </li>*/}
-      {/*      <li>*/}
-      {/*        <a href="https://chat.vite.dev/" target="_blank">*/}
-      {/*          <svg*/}
-      {/*            className="button-icon"*/}
-      {/*            role="presentation"*/}
-      {/*            aria-hidden="true"*/}
-      {/*          >*/}
-      {/*            <use href="/icons.svg#discord-icon"></use>*/}
-      {/*          </svg>*/}
-      {/*          Discord*/}
-      {/*        </a>*/}
-      {/*      </li>*/}
-      {/*      <li>*/}
-      {/*        <a href="https://x.com/vite_js" target="_blank">*/}
-      {/*          <svg*/}
-      {/*            className="button-icon"*/}
-      {/*            role="presentation"*/}
-      {/*            aria-hidden="true"*/}
-      {/*          >*/}
-      {/*            <use href="/icons.svg#x-icon"></use>*/}
-      {/*          </svg>*/}
-      {/*          X.com*/}
-      {/*        </a>*/}
-      {/*      </li>*/}
-      {/*      <li>*/}
-      {/*        <a href="https://bsky.app/profile/vite.dev" target="_blank">*/}
-      {/*          <svg*/}
-      {/*            className="button-icon"*/}
-      {/*            role="presentation"*/}
-      {/*            aria-hidden="true"*/}
-      {/*          >*/}
-      {/*            <use href="/icons.svg#bluesky-icon"></use>*/}
-      {/*          </svg>*/}
-      {/*          Bluesky*/}
-      {/*        </a>*/}
-      {/*      </li>*/}
-      {/*    </ul>*/}
-      {/*  </div>*/}
-      {/*</section>*/}
-
-      {/*<div className="ticks"></div>*/}
-      {/*<section id="spacer"></section>*/}
-
-        <div className="d-flex flex-column min-vh-100">
-
-            <Navbar />
-
-            <div className="app-container">
-                <Hero />
-            </div>
-
-            <main className="flex-grow-1">
-                <ProductList />
-            </main>
-
-            <Footer />
+          <span className="badge bg-secondary d-none d-md-inline-block">
+            Đang xem: {currentTab === 'home' ? 'Trang chủ' : currentTab === 'cart' ? 'Giỏ hàng' : 'Lịch sử đơn hàng'}
+          </span>
         </div>
-    </>
-  )
+      </div>
+
+      {/* 3. Nội dung chuyển đổi động theo từng Tab */}
+      <main className="flex-grow-1">
+        {currentTab === 'home' && (
+          <>
+            <div className="app-container">
+              <Hero />
+            </div>
+            <ProductList />
+          </>
+        )}
+
+        {currentTab === 'cart' && (
+          <Cart onContinueShopping={() => setCurrentTab('home')} />
+        )}
+
+        {currentTab === 'history' && (
+          <OrderHistory onContinueShopping={() => setCurrentTab('home')} />
+        )}
+      </main>
+
+      {/* 4. Footer */}
+      <Footer />
+    </div>
+  );
 }
 
-export default App
+export default App;
