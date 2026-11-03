@@ -46,7 +46,6 @@ export default function Cart({ onContinueShopping }: CartProps) {
 
     return (
         <section className="container py-5">
-            {/* Breadcrumb / Tiêu đề */}
             <div className="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
                 <div>
                     <h3 className="fw-bold text-dark m-0">
@@ -76,7 +75,6 @@ export default function Cart({ onContinueShopping }: CartProps) {
                 </div>
             ) : (
                 <div className="row g-4">
-                    {/* Danh sách sản phẩm trong giỏ */}
                     <div className="col-12 col-lg-8">
                         <div className="card shadow-sm border-0 rounded-3 overflow-hidden">
                             <div className="card-header bg-dark text-white fw-semibold py-3">
@@ -154,7 +152,6 @@ export default function Cart({ onContinueShopping }: CartProps) {
                         </div>
                     </div>
 
-                    {/* Tóm tắt đơn hàng */}
                     <div className="col-12 col-lg-4">
                         <div className="card shadow-sm border-0 rounded-3">
                             <div className="card-header bg-dark text-white fw-semibold py-3">
