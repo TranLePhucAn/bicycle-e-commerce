@@ -1,3 +1,7 @@
+import React from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+
 interface NavbarProps {
     currentTab?: string;
     onSelectTab?: (tab: string) => void;
@@ -5,6 +9,9 @@ interface NavbarProps {
 }
 
 export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2 }: NavbarProps) {
+    const { user, isLoggedIn, logout, openLoginModal } = useAuth();
+    const { showToast } = useToast();
+
     const handleTabClick = (e: React.MouseEvent, tab: string) => {
         e.preventDefault();
         if (onSelectTab) {
@@ -12,18 +19,24 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
         }
     };
 
+    const handleLogout = () => {
+        logout();
+        showToast('Đã đăng xuất thành công.', 'info');
+        if (currentTab === 'history' && onSelectTab) {
+            onSelectTab('home');
+        }
+    };
+
     return (
         <>
-            <header className="shadow-sm bg-white">
+            <header className="shadow-sm bg-white border-bottom">
                 <div className="container py-3">
                     <div className="row align-items-center gy-3">
-                        {/* Logo */}
                         <div className="col-12 col-md-3 text-center text-md-start">
                             <a
                                 href="#"
                                 onClick={(e) => handleTabClick(e, 'home')}
                                 className="text-decoration-none d-inline-block"
-                                title="Về Trang chủ"
                             >
                                 <div className="d-flex align-items-center">
                                     <span
@@ -33,16 +46,25 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
                                         🚲
                                     </span>
                                     <div className="lh-1 text-start">
-                                        <div className="fw-bold fs-4 tracking-wider" style={{ color: '#1e293b' }}>BIKESHOP</div>
-                                        <small className="text-muted" style={{ fontSize: '10px' }}>PHÂN PHỐI XE ĐẠP</small>
+                                        <div className="fw-bold fs-4 tracking-wider" style={{ color: '#1e293b' }}>
+                                            BIKESHOP
+                                        </div>
+                                        <small className="text-muted" style={{ fontSize: '10px' }}>
+                                            PHÂN PHỐI XE ĐẠP CHÍNH HÃNG
+                                        </small>
                                     </div>
                                 </div>
                             </a>
                         </div>
 
-                        {/* Search input */}
-                        <div className="col-12 col-md-5">
-                            <form className="d-flex" onSubmit={(e) => e.preventDefault()}>
+                        <div className="col-12 col-md-4 col-lg-5">
+                            <form
+                                className="d-flex"
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    showToast('Đang tìm kiếm sản phẩm...', 'info');
+                                }}
+                            >
                                 <div className="input-group rounded-3 overflow-hidden" style={{ border: '1px solid #1e293b' }}>
                                     <input
                                         type="text"
@@ -50,20 +72,30 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
                                         placeholder="Tìm kiếm dòng xe, thương hiệu..."
                                         aria-label="Search"
                                     />
-                                    <button className="btn text-white px-4" type="submit" style={{ backgroundColor: '#1e293b' }}>
+                                    <button className="btn text-white px-3" type="submit" style={{ backgroundColor: '#1e293b' }}>
                                         <i className="fa-solid fa-magnifying-glass"></i>
                                     </button>
                                 </div>
                             </form>
                         </div>
 
-                        {/* Cart & History Buttons */}
-                        <div className="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center gap-3">
-                            {/* Nút Giỏ hàng */}
+                        <div className="col-12 col-md-5 col-lg-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={(e) => handleTabClick(e, 'history')}
+                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 ${
+                                    currentTab === 'history' ? 'btn-primary text-white' : 'btn-outline-secondary'
+                                }`}
+                                title="Xem lịch sử đơn hàng"
+                            >
+                                <i className="fa-solid fa-clock-rotate-left"></i>
+                                <span className="fw-semibold small">Lịch sử đơn</span>
+                            </button>
+
                             <button
                                 type="button"
                                 onClick={(e) => handleTabClick(e, 'cart')}
-                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-decoration-none ${
+                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 ${
                                     currentTab === 'cart' ? 'btn-primary text-white' : 'btn-outline-dark'
                                 }`}
                                 style={
@@ -73,7 +105,7 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
                                 }
                             >
                                 <i className="fa-solid fa-bag-shopping"></i>
-                                <span className={`fw-semibold ${currentTab === 'cart' ? 'text-white' : 'text-dark'}`}>
+                                <span className={`fw-semibold small ${currentTab === 'cart' ? 'text-white' : 'text-dark'}`}>
                                     Giỏ hàng
                                 </span>
                                 <span
@@ -84,29 +116,41 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
                                 </span>
                             </button>
 
-                            {/* Nút Lịch sử đơn hàng */}
-                            <a
-                                href="#"
-                                onClick={(e) => handleTabClick(e, 'history')}
-                                className={`d-flex align-items-center text-decoration-none gap-2 px-2 py-1 rounded-2 ${
-                                    currentTab === 'history' ? 'bg-light border' : ''
-                                }`}
-                                title="Xem lịch sử đơn hàng"
-                            >
-                                <i className={`fa-solid fa-clock-rotate-left fs-4 ${currentTab === 'history' ? 'text-primary' : 'text-secondary'}`}></i>
-                                <div className="lh-sm text-start" style={{ fontSize: '13px' }}>
-                                    <div className={`fw-semibold ${currentTab === 'history' ? 'text-primary' : 'text-dark'}`}>
-                                        Lịch sử đơn
-                                    </div>
-                                    <div className="text-muted small">Tra cứu đơn hàng</div>
+                            {isLoggedIn ? (
+                                <div className="d-flex align-items-center gap-2 bg-light p-1 pe-2 rounded-3 border">
+                                    <span
+                                        className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+                                        style={{ width: '32px', height: '32px', fontSize: '13px' }}
+                                    >
+                                        {user?.name.charAt(0) || 'U'}
+                                    </span>
+                                    <span className="fw-semibold text-dark small d-none d-xl-inline">
+                                        {user?.name}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-danger border-0 p-1 px-2"
+                                        onClick={handleLogout}
+                                        title="Đăng xuất"
+                                    >
+                                        <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                                    </button>
                                 </div>
-                            </a>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="btn btn-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2"
+                                    onClick={openLoginModal}
+                                >
+                                    <i className="fa-regular fa-user"></i>
+                                    <span className="fw-semibold small">Đăng nhập</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
             </header>
 
-            {/* Menu chính dạng Tab Navigation */}
             <nav className="navbar navbar-expand-lg sticky-top navbar-dark p-0 m-0 border-0" style={{ backgroundColor: '#1e293b' }}>
                 <div className="container">
                     <button
@@ -138,30 +182,53 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
                                     href="#"
                                     onClick={(e) => handleTabClick(e, 'home')}
                                 >
-                                    XE ĐẠP ›
-                                </a>
-                            </li>
-                            <li className="nav-item" style={currentTab === 'cart' ? { backgroundColor: '#3b82f6' } : {}}>
-                                <a
-                                    className={`nav-link px-3 py-3 text-white ${currentTab === 'cart' ? 'active' : ''}`}
-                                    href="#"
-                                    onClick={(e) => handleTabClick(e, 'cart')}
-                                >
-                                    <i className="fa-solid fa-cart-shopping me-1"></i> GIỎ HÀNG
-                                </a>
-                            </li>
-                            <li className="nav-item" style={currentTab === 'history' ? { backgroundColor: '#3b82f6' } : {}}>
-                                <a
-                                    className={`nav-link px-3 py-3 text-white ${currentTab === 'history' ? 'active' : ''}`}
-                                    href="#"
-                                    onClick={(e) => handleTabClick(e, 'history')}
-                                >
-                                    <i className="fa-solid fa-clock-rotate-left me-1"></i> LỊCH SỬ ĐƠN HÀNG
+                                    XE ĐỊA HÌNH (MTB)
                                 </a>
                             </li>
                             <li className="nav-item">
-                                <a className="nav-link px-3 py-3 text-white" href="#about">
-                                    GIỚI THIỆU ›
+                                <a
+                                    className="nav-link px-3 py-3 text-white"
+                                    href="#"
+                                    onClick={(e) => handleTabClick(e, 'home')}
+                                >
+                                    XE ĐẠP ĐUA (ROAD)
+                                </a>
+                            </li>
+                            <li className="nav-item">
+                                <a
+                                    className="nav-link px-3 py-3 text-white"
+                                    href="#"
+                                    onClick={(e) => handleTabClick(e, 'home')}
+                                >
+                                    XE ĐƯỜNG PHỐ (TOURING)
+                                </a>
+                            </li>
+                            <li className="nav-item">
+                                <a
+                                    className="nav-link px-3 py-3 text-white"
+                                    href="#"
+                                    onClick={(e) => handleTabClick(e, 'home')}
+                                >
+                                    XE ĐIỆN & GẤP
+                                </a>
+                            </li>
+                            <li className="nav-item">
+                                <a
+                                    className="nav-link px-3 py-3 text-white"
+                                    href="#"
+                                    onClick={(e) => handleTabClick(e, 'home')}
+                                >
+                                    PHỤ KIỆN
+                                </a>
+                            </li>
+                            <li className="nav-item">
+                                <a
+                                    className="nav-link px-3 py-3 text-white"
+                                    href="#"
+                                    onClick={(e) => handleTabClick(e, 'not-found')}
+                                    title="Kiểm tra trang 404"
+                                >
+                                    BẢO HÀNH (404)
                                 </a>
                             </li>
                         </ul>

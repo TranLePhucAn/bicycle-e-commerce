@@ -55,7 +55,6 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
 
     return (
         <section className="container py-5">
-            {/* Header */}
             <div className="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
                 <div>
                     <h3 className="fw-bold text-dark m-0">
@@ -74,7 +73,6 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
                 </button>
             </div>
 
-            {/* Danh sách đơn hàng */}
             <div className="d-flex flex-column gap-4">
                 {orders.map(order => (
                     <div key={order.orderId} className="card shadow-sm border-0 rounded-3 overflow-hidden">
