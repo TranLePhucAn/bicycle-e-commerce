@@ -4,11 +4,12 @@ import { useToast } from '../../context/ToastContext';
 
 interface NavbarProps {
     currentTab?: string;
-    onSelectTab?: (tab: string) => void;
+    selectedCategory?: string | string[];
+    onSelectTab?: (tab: string | string[]) => void;
     cartCount?: number;
 }
 
-export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2 }: NavbarProps) {
+export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất cả', onSelectTab, cartCount = 2 }: NavbarProps) {
     const { user, isLoggedIn, logout, openLoginModal } = useAuth();
     const { showToast } = useToast();
 
@@ -25,6 +26,14 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
         if (currentTab === 'history' && onSelectTab) {
             onSelectTab('home');
         }
+    };
+
+    const isCategoryActive = (categoryName: string) => {
+        if (currentTab !== 'home') return false;
+        if (Array.isArray(selectedCategory)) {
+            return selectedCategory.includes(categoryName);
+        }
+        return selectedCategory === categoryName;
     };
 
     return (
@@ -167,47 +176,59 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
 
                     <div className="collapse navbar-collapse" id="mainMenu">
                         <ul className="navbar-nav w-100 justify-content-center text-uppercase fw-bold" style={{ fontSize: '14px' }}>
-                            <li className="nav-item" style={currentTab === 'home' ? { backgroundColor: '#3b82f6' } : {}}>
+                            <li className="nav-item" style={(currentTab === 'home' && selectedCategory === 'Tất cả') ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
-                                    className={`nav-link px-3 py-3 text-white ${currentTab === 'home' ? 'active' : ''}`}
+                                    className={`nav-link px-3 py-3 text-white ${(currentTab === 'home' && selectedCategory === 'Tất cả') ? 'active' : ''}`}
                                     href="#"
                                     onClick={(e) => handleTabClick(e, 'home')}
                                 >
                                     <i className="fa-solid fa-house me-1"></i> TRANG CHỦ
                                 </a>
                             </li>
-                            <li className="nav-item">
+                            <li className="nav-item" style={isCategoryActive('Xe địa hình (MTB)') ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
                                     className="nav-link px-3 py-3 text-white"
                                     href="#"
-                                    onClick={(e) => handleTabClick(e, 'home')}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (onSelectTab) onSelectTab('Xe địa hình (MTB)');
+                                    }}
                                 >
                                     XE ĐỊA HÌNH (MTB)
                                 </a>
                             </li>
-                            <li className="nav-item">
+                            <li className="nav-item" style={isCategoryActive('Xe đạp đua') ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
                                     className="nav-link px-3 py-3 text-white"
                                     href="#"
-                                    onClick={(e) => handleTabClick(e, 'home')}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (onSelectTab) onSelectTab('Xe đạp đua');
+                                    }}
                                 >
                                     XE ĐẠP ĐUA (ROAD)
                                 </a>
                             </li>
-                            <li className="nav-item">
+                            <li className="nav-item" style={isCategoryActive('Xe đường phố (Touring)') ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
                                     className="nav-link px-3 py-3 text-white"
                                     href="#"
-                                    onClick={(e) => handleTabClick(e, 'home')}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (onSelectTab) onSelectTab('Xe đường phố (Touring)');
+                                    }}
                                 >
                                     XE ĐƯỜNG PHỐ (TOURING)
                                 </a>
                             </li>
-                            <li className="nav-item">
+                            <li className="nav-item" style={(currentTab === 'home' && Array.isArray(selectedCategory) && selectedCategory.includes('Xe đạp điện')) ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
                                     className="nav-link px-3 py-3 text-white"
                                     href="#"
-                                    onClick={(e) => handleTabClick(e, 'home')}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (onSelectTab) onSelectTab(['Xe đạp điện', 'Xe đạp gấp']);
+                                    }}
                                 >
                                     XE ĐIỆN & GẤP
                                 </a>
