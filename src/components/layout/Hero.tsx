@@ -7,7 +7,7 @@ export default function Hero() {
 
                 <div className="hero-content">
                     <h1 className="hero-title">
-                        Chinh Phục Mọi Nẻo Đường Cùng <span>Bicycle Store</span>
+                        Chinh Phục Mọi Nẻo Đường Cùng <span>BIKESHOP</span>
                     </h1>
                     <p className="hero-description">
                         Khám phá các dòng xe đạp địa hình, xe đạp đua và xe đạp thể thao cao cấp chính hãng.
