@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -6,12 +6,14 @@ interface NavbarProps {
     currentTab?: string;
     selectedCategory?: string | string[];
     onSelectTab?: (tab: string | string[]) => void;
+    onSearch?: (keyword: string) => void;
     cartCount?: number;
 }
 
-export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất cả', onSelectTab, cartCount = 2 }: NavbarProps) {
+export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất cả', onSelectTab, onSearch, cartCount = 2 }: NavbarProps) {
     const { user, isLoggedIn, logout, openLoginModal } = useAuth();
     const { showToast } = useToast();
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleTabClick = (e: React.MouseEvent, tab: string) => {
         e.preventDefault();
@@ -34,6 +36,16 @@ export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất 
             return selectedCategory.includes(categoryName);
         }
         return selectedCategory === categoryName;
+    };
+
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const text = searchTerm.trim();
+        if (!text) {
+            showToast('Vui lòng nhập từ khóa tìm kiếm!', 'warning');
+            return;
+        }
+        onSearch?.(text);
     };
 
     return (
@@ -67,19 +79,15 @@ export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất 
                         </div>
 
                         <div className="col-12 col-md-4 col-lg-5">
-                            <form
-                                className="d-flex"
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    showToast('Đang tìm kiếm sản phẩm...', 'info');
-                                }}
-                            >
+                            <form className="d-flex" onSubmit={handleSearchSubmit}>
                                 <div className="input-group rounded-3 overflow-hidden" style={{ border: '1px solid #1e293b' }}>
                                     <input
                                         type="text"
                                         className="form-control border-0 shadow-none px-3"
                                         placeholder="Tìm kiếm dòng xe, thương hiệu..."
                                         aria-label="Search"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                     <button className="btn text-white px-3" type="submit" style={{ backgroundColor: '#1e293b' }}>
                                         <i className="fa-solid fa-magnifying-glass"></i>
@@ -88,11 +96,11 @@ export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất 
                             </form>
                         </div>
 
-                        <div className="col-12 col-md-5 col-lg-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2 flex-wrap">
+                        <div className="col-12 col-md-5 col-lg-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2 flex-nowrap">
                             <button
                                 type="button"
                                 onClick={(e) => handleTabClick(e, 'history')}
-                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 ${
+                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap ${
                                     currentTab === 'history' ? 'btn-primary text-white' : 'btn-outline-secondary'
                                 }`}
                                 title="Xem lịch sử đơn hàng"
@@ -104,7 +112,7 @@ export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất 
                             <button
                                 type="button"
                                 onClick={(e) => handleTabClick(e, 'cart')}
-                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 ${
+                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap ${
                                     currentTab === 'cart' ? 'btn-primary text-white' : 'btn-outline-dark'
                                 }`}
                                 style={
@@ -148,7 +156,7 @@ export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất 
                             ) : (
                                 <button
                                     type="button"
-                                    className="btn btn-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2"
+                                    className="btn btn-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap"
                                     onClick={openLoginModal}
                                 >
                                     <i className="fa-regular fa-user"></i>
@@ -230,7 +238,7 @@ export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất 
                                         if (onSelectTab) onSelectTab(['Xe đạp điện', 'Xe đạp gấp']);
                                     }}
                                 >
-                                    XE ĐIỆN & GẤP
+                                    XE ĐẠP ĐIỆN & GẤP
                                 </a>
                             </li>
                             <li className="nav-item">
