@@ -11,14 +11,17 @@ import OrderHistory from './components/history/OrderHistory';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import NotFound from './components/common/NotFound';
 import LoginModal from './components/auth/LoginModal';
+import BikeDetail from './components/home/BikeDetail';
 
 function MainLayout() {
   const [currentTab, setCurrentTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [selectedBike, setSelectedBike] = useState(null);
 
   const handleSelectTab = (tabOrCategory) => {
     setSearchKeyword('');
+    setSelectedBike(null);
     if (['home', 'cart', 'history', 'not-found'].includes(tabOrCategory)) {
       setCurrentTab(tabOrCategory);
       if (tabOrCategory === 'home') {
@@ -34,6 +37,7 @@ function MainLayout() {
     setCurrentTab('home');
     setSelectedCategory('Tất cả');
     setSearchKeyword(keyword);
+    setSelectedBike(null);
   };
 
   return (
@@ -47,20 +51,31 @@ function MainLayout() {
       />
 
       <main className="flex-grow-1">
-        {currentTab === 'home' && (
-          <>
-            {selectedCategory === 'Tất cả' && !searchKeyword && (
-              <div className="app-container">
-                <Hero />
-              </div>
-            )}
-            <BiketList
-              selectedCategory={selectedCategory}
-              searchKeyword={searchKeyword}
-              onSelectTab={handleSelectTab}
-            />
-          </>
-        )}
+          {currentTab === 'home' && (
+            <>
+              {selectedBike ? (
+                  <BikeDetail
+                      bike={selectedBike}
+                      onBack={() => setSelectedBike(null)}
+                      onSelectTab={handleSelectTab}
+                  />
+              ) : (
+                 <>
+                     {selectedCategory === 'Tất cả' && !searchKeyword && (
+                         <div className="app-container">
+                             <Hero />
+                         </div>
+                     )}
+                     <BiketList
+                         selectedCategory={selectedCategory}
+                         searchKeyword={searchKeyword}
+                         onSelectTab={handleSelectTab}
+                         onSelectBike={(bike) => setSelectedBike(bike)}
+                     />
+                 </>
+              )}
+            </>
+          )}
 
         {currentTab === 'cart' && (
           <Cart onContinueShopping={() => setCurrentTab('home')} />
