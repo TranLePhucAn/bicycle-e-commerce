@@ -15,6 +15,12 @@ export default function BikeCard({ bike }: { bike: any }) {
     return (
         <div className="col-12 col-sm-6 col-md-4 col-lg-3">
             <div className="card product-card h-100 rounded-3 overflow-hidden bg-white shadow-sm position-relative">
+                {bike.discount && (
+                    <span className="position-absolute top-0 start-0 badge bg-danger m-2 z-1">
+                        {bike.discount}
+                    </span>
+                )}
+
                 <span className={`position-absolute top-0 end-0 badge m-2 z-1 ${getStatusBadgeClass(bike.status)}`}>
                     {bike.status}
                 </span>
@@ -30,8 +36,15 @@ export default function BikeCard({ bike }: { bike: any }) {
                     </h5>
 
                     <div className="mt-auto">
-                        <div className="text-danger fw-bold fs-5 mb-2">
-                            {bike.price.toLocaleString('vi-VN')} đ
+                        <div className="d-flex align-items-end gap-2 mb-2">
+                            <div className="text-danger fw-bold fs-5 lh-1">
+                                {bike.price.toLocaleString('vi-VN')} đ
+                            </div>
+                            {bike.originalPrice && (
+                                <div className="text-muted text-decoration-line-through lh-1" style={{ fontSize: '13px' }}>
+                                    {bike.originalPrice.toLocaleString('vi-VN')} đ
+                                </div>
+                            )}
                         </div>
 
                         <div className="d-flex justify-content-between align-items-center mb-3 text-muted small">
