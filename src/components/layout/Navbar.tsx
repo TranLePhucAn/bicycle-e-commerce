@@ -1,16 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
 interface NavbarProps {
     currentTab?: string;
-    onSelectTab?: (tab: string) => void;
+    selectedCategory?: string | string[];
+    onSelectTab?: (tab: string | string[]) => void;
+    onSearch?: (keyword: string) => void;
     cartCount?: number;
 }
 
-export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2 }: NavbarProps) {
+export default function Navbar({
+    currentTab = 'home',
+    selectedCategory = 'Tất cả',
+    onSelectTab,
+    onSearch,
+    cartCount = 2,
+}: NavbarProps) {
     const { user, isLoggedIn, logout, openLoginModal } = useAuth();
     const { showToast } = useToast();
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleTabClick = (e: React.MouseEvent, tab: string) => {
         e.preventDefault();
@@ -25,6 +34,24 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
         if (currentTab === 'history' && onSelectTab) {
             onSelectTab('home');
         }
+    };
+
+    const isCategoryActive = (categoryName: string) => {
+        if (currentTab !== 'home') return false;
+        if (Array.isArray(selectedCategory)) {
+            return selectedCategory.includes(categoryName);
+        }
+        return selectedCategory === categoryName;
+    };
+
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const text = searchTerm.trim();
+        if (!text) {
+            showToast('Vui lòng nhập từ khóa tìm kiếm!', 'warning');
+            return;
+        }
+        onSearch?.(text);
     };
 
     return (
@@ -58,19 +85,15 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
                         </div>
 
                         <div className="col-12 col-md-4 col-lg-5">
-                            <form
-                                className="d-flex"
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    showToast('Đang tìm kiếm sản phẩm...', 'info');
-                                }}
-                            >
+                            <form className="d-flex" onSubmit={handleSearchSubmit}>
                                 <div className="input-group rounded-3 overflow-hidden" style={{ border: '1px solid #1e293b' }}>
                                     <input
                                         type="text"
                                         className="form-control border-0 shadow-none px-3"
                                         placeholder="Tìm kiếm dòng xe, thương hiệu..."
                                         aria-label="Search"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                     <button className="btn text-white px-3" type="submit" style={{ backgroundColor: '#1e293b' }}>
                                         <i className="fa-solid fa-magnifying-glass"></i>
@@ -79,11 +102,11 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
                             </form>
                         </div>
 
-                        <div className="col-12 col-md-5 col-lg-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2 flex-wrap">
+                        <div className="col-12 col-md-5 col-lg-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2 flex-nowrap">
                             <button
                                 type="button"
                                 onClick={(e) => handleTabClick(e, 'history')}
-                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 ${
+                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap ${
                                     currentTab === 'history' ? 'btn-primary text-white' : 'btn-outline-secondary'
                                 }`}
                                 title="Xem lịch sử đơn hàng"
@@ -95,7 +118,7 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
                             <button
                                 type="button"
                                 onClick={(e) => handleTabClick(e, 'cart')}
-                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 ${
+                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap ${
                                     currentTab === 'cart' ? 'btn-primary text-white' : 'btn-outline-dark'
                                 }`}
                                 style={
@@ -145,7 +168,7 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
                                 <div className="d-flex align-items-center gap-2">
                                     <button
                                         type="button"
-                                        className="btn btn-outline-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2"
+                                        className="btn btn-outline-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap"
                                         onClick={() => openLoginModal('login')}
                                         title="Đăng nhập tài khoản"
                                     >
@@ -154,7 +177,7 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
                                     </button>
                                     <button
                                         type="button"
-                                        className="btn btn-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2"
+                                        className="btn btn-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap"
                                         onClick={() => openLoginModal('register')}
                                         title="Đăng ký tài khoản mới"
                                     >
@@ -184,47 +207,59 @@ export default function Navbar({ currentTab = 'home', onSelectTab, cartCount = 2
 
                     <div className="collapse navbar-collapse" id="mainMenu">
                         <ul className="navbar-nav w-100 justify-content-center text-uppercase fw-bold" style={{ fontSize: '14px' }}>
-                            <li className="nav-item" style={currentTab === 'home' ? { backgroundColor: '#3b82f6' } : {}}>
+                            <li className="nav-item" style={(currentTab === 'home' && selectedCategory === 'Tất cả') ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
-                                    className={`nav-link px-3 py-3 text-white ${currentTab === 'home' ? 'active' : ''}`}
+                                    className={`nav-link px-3 py-3 text-white ${(currentTab === 'home' && selectedCategory === 'Tất cả') ? 'active' : ''}`}
                                     href="#"
                                     onClick={(e) => handleTabClick(e, 'home')}
                                 >
                                     <i className="fa-solid fa-house me-1"></i> TRANG CHỦ
                                 </a>
                             </li>
-                            <li className="nav-item">
+                            <li className="nav-item" style={isCategoryActive('Xe địa hình (MTB)') ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
                                     className="nav-link px-3 py-3 text-white"
                                     href="#"
-                                    onClick={(e) => handleTabClick(e, 'home')}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (onSelectTab) onSelectTab('Xe địa hình (MTB)');
+                                    }}
                                 >
                                     XE ĐỊA HÌNH (MTB)
                                 </a>
                             </li>
-                            <li className="nav-item">
+                            <li className="nav-item" style={isCategoryActive('Xe đạp đua') ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
                                     className="nav-link px-3 py-3 text-white"
                                     href="#"
-                                    onClick={(e) => handleTabClick(e, 'home')}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (onSelectTab) onSelectTab('Xe đạp đua');
+                                    }}
                                 >
                                     XE ĐẠP ĐUA (ROAD)
                                 </a>
                             </li>
-                            <li className="nav-item">
+                            <li className="nav-item" style={isCategoryActive('Xe đường phố (Touring)') ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
                                     className="nav-link px-3 py-3 text-white"
                                     href="#"
-                                    onClick={(e) => handleTabClick(e, 'home')}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (onSelectTab) onSelectTab('Xe đường phố (Touring)');
+                                    }}
                                 >
                                     XE ĐƯỜNG PHỐ (TOURING)
                                 </a>
                             </li>
-                            <li className="nav-item">
+                            <li className="nav-item" style={(currentTab === 'home' && Array.isArray(selectedCategory) && selectedCategory.includes('Xe đạp điện')) ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
                                     className="nav-link px-3 py-3 text-white"
                                     href="#"
-                                    onClick={(e) => handleTabClick(e, 'home')}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (onSelectTab) onSelectTab(['Xe đạp điện', 'Xe đạp gấp']);
+                                    }}
                                 >
                                     XE ĐIỆN & GẤP
                                 </a>

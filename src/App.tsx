@@ -5,7 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Hero from './components/layout/Hero';
-import ProductList from './components/home/ProductList';
+import BiketList from './components/home/BiketList.tsx';
 import Cart from './components/cart/Cart';
 import OrderHistory from './components/history/OrderHistory';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -25,7 +25,7 @@ function MainLayout() {
             <div className="app-container">
               <Hero />
             </div>
-            <ProductList />
+            <BiketList />
           </>
         )}
 
