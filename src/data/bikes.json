@@ -178,5 +178,16 @@
     "price": 18900000,
     "stock": 0,
     "status": "Hết hàng"
+  },
+  {
+    "id": "BK-021",
+    "name": "Giant ATX",
+    "category": "Xe địa hình (MTB)",
+    "image": "bike01.png",
+    "price": 8500000,
+    "originalPrice": 10500000,
+    "discount": "Giảm 19%",
+    "stock": 15,
+    "status": "Còn hàng"
   }
 ]

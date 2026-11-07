@@ -1,24 +1,4 @@
-// import bikesData from '../../data/bikes.json';
-// import BikeCard from './BikeCard';
-// import '../../styles/home.css';
-//
-// export default function BiketList() {
-//     return (
-//         <section className="container py-5">
-//             <div className="d-flex justify-content-between align-items-center mb-4">
-//                 <h3 className="fw-bold text-dark m-0 border-start border-4 border-dark ps-3">
-//                     DANH SÁCH XE ĐẠP NỔI BẬT
-//                 </h3>
-//             </div>
-//
-//             <div className="row g-4">
-//                 {bikesData.map((bike) => (<BikeCard key={bike.id} bike={bike} />))}
-//             </div>
-//         </section>
-//     );
-// }
-
-import { useState, useMemo } from 'react';
+import {useState, useMemo, useEffect} from 'react';
 import bikesData from '../../data/bikes.json';
 import BikeCard from './BikeCard';
 import '../../styles/home.css';
@@ -32,12 +12,21 @@ interface BikeListProps {
 export default function ProductList({ selectedCategory = 'Tất cả', searchKeyword = '', onSelectTab }: BikeListProps) {
     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
     const [priceRange, setPriceRange] = useState<string>('all');
-    const [onlyDiscount, setOnlyDiscount] = useState<boolean>(false); // State lọc khuyến mãi
+    const [onlyDiscount, setOnlyDiscount] = useState<boolean>(false);
     const [sortBy, setSortBy] = useState<string>('newest');
     const [brandSearch, setBrandSearch] = useState<string>('');
 
     const isSearchPage = Boolean(searchKeyword.trim());
     const isHomePage = selectedCategory === 'Tất cả' && !isSearchPage;
+
+    const [visibleCount, setVisibleCount] = useState<number>(12);
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const itemsPerPage = 8;
+
+    useEffect(() => {
+        setCurrentPage(1);
+        setVisibleCount(12);
+    }, [selectedCategory, searchKeyword, selectedBrands, priceRange, onlyDiscount, sortBy]);
 
     const availableBrands = useMemo(() => {
         const brands = Array.from(new Set(bikesData.map((b: any) => b.brand).filter(Boolean)));
@@ -112,6 +101,90 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
         b.toLowerCase().includes(brandSearch.toLowerCase())
     );
 
+    const totalPages = Math.ceil(filteredBikes.length / itemsPerPage);
+    const paginatedBikes = useMemo(() => {
+        if (isHomePage) return filteredBikes.slice(0, visibleCount);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredBikes.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredBikes, isHomePage, visibleCount, currentPage, itemsPerPage]);
+
+    const renderPagination = () => {
+        if (totalPages <= 1) return null;
+
+        const pages: (number | string)[] = [];
+        const maxVisible = 5;
+
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            if (currentPage <= 4) {
+                for (let i = 1; i <= maxVisible; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            } else if (currentPage >= totalPages - 3) {
+                pages.push(1);
+                pages.push('...');
+                for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                pages.push('...');
+                for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            }
+        }
+
+        return (
+            <div className="d-flex justify-content-center align-items-center gap-2 my-4">
+                <button
+                    className="btn btn-sm btn-light border px-2 py-1 text-dark"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    style={{ minWidth: '32px', height: '32px' }}
+                >
+                    <i className="fa-solid fa-chevron-left"></i>
+                </button>
+
+                {pages.map((page, index) => {
+                    if (page === '...') {
+                        return (
+                            <span key={`dots-${index}`} className="px-2 text-muted fw-bold">
+                                ...
+                            </span>
+                        );
+                    }
+                    const isSelected = page === currentPage;
+                    return (
+                        <button
+                            key={`page-${page}`}
+                            onClick={() => setCurrentPage(Number(page))}
+                            className={`btn btn-sm rounded-3 fw-semibold ${
+                                isSelected ? 'btn-primary text-white' : 'btn-light border text-dark'
+                            }`}
+                            style={{
+                                minWidth: '32px',
+                                height: '32px',
+                                backgroundColor: isSelected ? '#3b82f6' : '#fff',
+                                borderColor: isSelected ? '#3b82f6' : '#dee2e6'
+                            }}
+                        >
+                            {page}
+                        </button>
+                    );
+                })}
+
+                <button
+                    className="btn btn-sm btn-light border px-2 py-1 text-dark"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    style={{ minWidth: '32px', height: '32px' }}
+                >
+                    <i className="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        );
+    };
+
     if (isSearchPage) {
         return (
             <section className="container py-3">
@@ -167,10 +240,20 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                 </div>
 
                 <div className="row g-4">
-                    {filteredBikes.map((bike: any) => (
+                    {paginatedBikes.map((bike: any) => (
                         <BikeCard key={bike.id} bike={bike} />
                     ))}
                 </div>
+                {visibleCount < filteredBikes.length && (
+                    <div className="text-center mt-4">
+                        <button
+                            className="btn btn-outline-dark px-4 py-2 fw-semibold rounded-3 shadow-sm"
+                            onClick={() => setVisibleCount((prev) => prev + 12)}
+                        >
+                            Xem thêm
+                        </button>
+                    </div>
+                )}
             </section>
         );
     }
@@ -198,7 +281,7 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
 
             <div className="row g-4">
                 <div className="col-12 col-lg-3">
-                    <div className="p-3  rounded">
+                    <div className="p-3 rounded">
                         <h5 className="fw-bold text-uppercase mb-1">BỘ LỌC</h5>
                         <p className="text-muted small mb-4">Giúp lọc nhanh sản phẩm bạn tìm kiếm</p>
 
@@ -333,11 +416,14 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                     </div>
 
                     {filteredBikes.length > 0 ? (
-                        <div className="row g-4">
-                            {filteredBikes.map((bike: any) => (
-                                <BikeCard key={bike.id} bike={bike} />
-                            ))}
-                        </div>
+                        <>
+                            <div className="row g-4">
+                                {paginatedBikes.map((bike: any) => (
+                                    <BikeCard key={bike.id} bike={bike} />
+                                ))}
+                            </div>
+                            {renderPagination()}
+                        </>
                     ) : (
                         <div className="bg-white text-center py-5 rounded border text-muted">
                             <i className="fa-solid fa-box-open fs-1 mb-2 text-secondary"></i>
