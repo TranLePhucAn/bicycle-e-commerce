@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import type { CheckoutItem } from '../../services/checkoutService';
 
 interface CartProps {
     onContinueShopping: () => void;
+    onCheckout: (items: CheckoutItem[], clearCart: () => void) => void;
 }
 
-export default function Cart({ onContinueShopping }: CartProps) {
+export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
     const [cartItems, setCartItems] = useState([
         {
             id: 'BK-001',
@@ -21,6 +23,8 @@ export default function Cart({ onContinueShopping }: CartProps) {
             image: 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?auto=format&fit=crop&w=300&q=80',
         },
     ]);
+
+    const clearCart = () => setCartItems([]);
 
     const updateQuantity = (id: string, delta: number) => {
         setCartItems(prev =>
@@ -177,7 +181,7 @@ export default function Cart({ onContinueShopping }: CartProps) {
                                 <button
                                     type="button"
                                     className="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm mb-2"
-                                    onClick={() => alert('Chức năng đặt hàng đang được hoàn thiện ở tuần tiếp theo!')}
+                                    onClick={() => onCheckout(cartItems, clearCart)}
                                 >
                                     Tiến Hành Thanh Toán
                                 </button>
