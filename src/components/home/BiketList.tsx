@@ -1,15 +1,14 @@
-import {useState, useMemo, useEffect} from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import bikesData from '../../data/bikes.json';
 import BikeCard from './BikeCard';
 import '../../styles/home.css';
 
-interface BikeListProps {
+export default function ProductList({selectedCategory = 'Tất cả', searchKeyword = '', onSelectTab, onSelectBike}: {
     selectedCategory?: string | string[];
     searchKeyword?: string;
     onSelectTab?: (category: string) => void;
-}
-
-export default function ProductList({ selectedCategory = 'Tất cả', searchKeyword = '', onSelectTab }: BikeListProps) {
+    onSelectBike?: (bike: any) => void;
+}) {
     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
     const [priceRange, setPriceRange] = useState<string>('all');
     const [onlyDiscount, setOnlyDiscount] = useState<boolean>(false);
@@ -202,7 +201,7 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                                 Trang chủ
                             </a>
                         </li>
-                        <li className="breadcrumb-item active text-success fw-semibold" aria-current="page">
+                        <li className="breadcrumb-item active text-dark fw-bold" aria-current="page">
                             Kết quả tìm kiếm
                         </li>
                     </ol>
@@ -215,11 +214,14 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                 </div>
 
                 {filteredBikes.length > 0 ? (
-                    <div className="row g-4">
-                        {filteredBikes.map((bike: any) => (
-                            <BikeCard key={bike.id} bike={bike} />
-                        ))}
-                    </div>
+                    <>
+                        <div className="row g-4">
+                            {paginatedBikes.map((bike: any) => (
+                                <BikeCard key={bike.id} bike={bike} onDetailClick={onSelectBike} />
+                            ))}
+                        </div>
+                        {renderPagination()}
+                    </>
                 ) : (
                     <div className="bg-white text-center py-5 rounded border text-muted">
                         <i className="fa-solid fa-magnifying-glass fs-1 mb-2 text-secondary"></i>
@@ -241,7 +243,7 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
 
                 <div className="row g-4">
                     {paginatedBikes.map((bike: any) => (
-                        <BikeCard key={bike.id} bike={bike} />
+                        <BikeCard key={bike.id} bike={bike} onDetailClick={onSelectBike} />
                     ))}
                 </div>
                 {visibleCount < filteredBikes.length && (
@@ -257,6 +259,7 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
             </section>
         );
     }
+
     return (
         <section className="container py-3">
             <nav aria-label="breadcrumb" className="mb-3">
@@ -273,8 +276,8 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                             Trang chủ
                         </a>
                     </li>
-                    <li className="breadcrumb-item active text-success fw-semibold" aria-current="page">
-                        {categoryName.toUpperCase()}
+                    <li className="breadcrumb-item active text-dark fw-bold" aria-current="page">
+                        {categoryName}
                     </li>
                 </ol>
             </nav>
@@ -419,7 +422,7 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                         <>
                             <div className="row g-4">
                                 {paginatedBikes.map((bike: any) => (
-                                    <BikeCard key={bike.id} bike={bike} />
+                                    <BikeCard key={bike.id} bike={bike} onDetailClick={onSelectBike} />
                                 ))}
                             </div>
                             {renderPagination()}

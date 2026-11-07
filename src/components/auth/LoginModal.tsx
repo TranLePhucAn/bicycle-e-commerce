@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth, AuthModalMode } from '../../context/AuthContext';
+import { useAuth, type AuthModalMode } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
