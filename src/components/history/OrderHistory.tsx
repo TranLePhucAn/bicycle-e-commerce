@@ -1,10 +1,13 @@
 import React from 'react';
+import { useAuth } from '../../context/AuthContext';
 
 interface OrderHistoryProps {
     onContinueShopping: () => void;
 }
 
 export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) {
+    const { user } = useAuth();
+
     const orders = [
         {
             orderId: 'DH-20261025-01',
@@ -55,13 +58,15 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
 
     return (
         <section className="container py-5">
-            <div className="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+            <div className="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3 flex-wrap gap-2">
                 <div>
                     <h3 className="fw-bold text-dark m-0">
                         <i className="fa-solid fa-clock-rotate-left me-2 text-primary"></i>
                         Lịch Sử Đơn Hàng
                     </h3>
-                    <small className="text-muted">Theo dõi và tra cứu tiến trình các đơn hàng đã mua tại BikeShop</small>
+                    <small className="text-muted">
+                        Tra cứu các đơn hàng của khách hàng: <strong className="text-dark">{user?.name}</strong> ({user?.email})
+                    </small>
                 </div>
                 <button
                     type="button"

@@ -47,7 +47,7 @@ export default function ProtectedRoute({
                             <button
                                 type="button"
                                 className="btn btn-primary px-4 py-2 fw-semibold rounded-3 d-flex align-items-center justify-content-center gap-2"
-                                onClick={openLoginModal}
+                                onClick={() => openLoginModal('login')}
                             >
                                 <i className="fa-solid fa-right-to-bracket"></i>
                                 Đăng Nhập Ngay
