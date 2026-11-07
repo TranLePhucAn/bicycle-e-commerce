@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -10,7 +10,13 @@ interface NavbarProps {
     cartCount?: number;
 }
 
-export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất cả', onSelectTab, onSearch, cartCount = 2 }: NavbarProps) {
+export default function Navbar({
+    currentTab = 'home',
+    selectedCategory = 'Tất cả',
+    onSelectTab,
+    onSearch,
+    cartCount = 2,
+}: NavbarProps) {
     const { user, isLoggedIn, logout, openLoginModal } = useAuth();
     const { showToast } = useToast();
     const [searchTerm, setSearchTerm] = useState('');
@@ -139,11 +145,16 @@ export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất 
                                         className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
                                         style={{ width: '32px', height: '32px', fontSize: '13px' }}
                                     >
-                                        {user?.name.charAt(0) || 'U'}
+                                        {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
                                     </span>
-                                    <span className="fw-semibold text-dark small d-none d-xl-inline">
-                                        {user?.name}
-                                    </span>
+                                    <div className="d-none d-xl-flex flex-column text-start" style={{ lineHeight: 1.1 }}>
+                                        <span className="fw-semibold text-dark small">
+                                            {user?.name}
+                                        </span>
+                                        <span className="text-muted" style={{ fontSize: '10px' }}>
+                                            {user?.role || 'Thành viên'}
+                                        </span>
+                                    </div>
                                     <button
                                         type="button"
                                         className="btn btn-sm btn-outline-danger border-0 p-1 px-2"
@@ -154,14 +165,26 @@ export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất 
                                     </button>
                                 </div>
                             ) : (
-                                <button
-                                    type="button"
-                                    className="btn btn-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap"
-                                    onClick={openLoginModal}
-                                >
-                                    <i className="fa-regular fa-user"></i>
-                                    <span className="fw-semibold small">Đăng nhập</span>
-                                </button>
+                                <div className="d-flex align-items-center gap-2">
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap"
+                                        onClick={() => openLoginModal('login')}
+                                        title="Đăng nhập tài khoản"
+                                    >
+                                        <i className="fa-regular fa-user"></i>
+                                        <span className="fw-semibold small">Đăng nhập</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap"
+                                        onClick={() => openLoginModal('register')}
+                                        title="Đăng ký tài khoản mới"
+                                    >
+                                        <i className="fa-solid fa-user-plus"></i>
+                                        <span className="fw-semibold small">Đăng ký</span>
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -238,7 +261,7 @@ export default function Navbar({ currentTab = 'home', selectedCategory = 'Tất 
                                         if (onSelectTab) onSelectTab(['Xe đạp điện', 'Xe đạp gấp']);
                                     }}
                                 >
-                                    XE ĐẠP ĐIỆN & GẤP
+                                    XE ĐIỆN & GẤP
                                 </a>
                             </li>
                             <li className="nav-item">
