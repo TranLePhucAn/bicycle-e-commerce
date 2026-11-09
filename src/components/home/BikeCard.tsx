@@ -1,4 +1,15 @@
+import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
+
 export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailClick?: (bike: any) => void }) {
+    const { addToCart } = useCart();
+    const { showToast } = useToast();
+
+    const handleAddToCart = () => {
+        addToCart(bike);
+        showToast(`Đã thêm "${bike.name}" vào giỏ hàng!`, 'success');
+    };
+
     const getStatusBadgeClass = (status: any) => {
         switch (status) {
             case 'Còn hàng':
@@ -64,7 +75,8 @@ export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailC
 
                         <button
                             className={`btn w-100 btn-sm py-2 fw-semibold ${bike.stock === 0 ? 'btn-secondary disabled' : 'btn-dark'}`}
-                            onClick={() => onDetailClick?.(bike)}
+                            onClick={handleAddToCart}
+                            disabled={bike.stock === 0}
                         >
                             <i className="fa-solid fa-cart-plus me-2"></i>
                             {bike.stock === 0 ? 'Tạm hết hàng' : 'Thêm vào giỏ'}
