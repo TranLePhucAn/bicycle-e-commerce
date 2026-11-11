@@ -133,7 +133,7 @@ export default function Checkout({ items, onCancel, onOrderCreated }: CheckoutPr
 
                                     <label className="form-label" htmlFor="checkout-phone">Số điện thoại</label>
                                     <input id="checkout-phone" className="form-control mb-3" type="tel" required
-                                        pattern="[0-9+(). -]{9,16}" title="Nhập số điện thoại hợp lệ."
+                                        pattern="[0-9+(). \-]{9,16}" title="Nhập số điện thoại hợp lệ."
                                         value={recipient.phone} onChange={(e) => setRecipient({ ...recipient, phone: e.target.value })} />
 
                                     <label className="form-label" htmlFor="checkout-email">Email</label>

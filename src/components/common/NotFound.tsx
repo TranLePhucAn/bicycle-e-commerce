@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface NotFoundProps {
     onGoHome: () => void;
     onGoCart?: () => void;
