@@ -2,7 +2,9 @@
   {
     "id": "BK-001",
     "name": "Giant ATX",
+    "brand": "Giant",
     "category": "Xe địa hình (MTB)",
+    "frameSize": ["S", "M", "L"],
     "image": "bike01.png",
     "price": 8500000,
     "stock": 15,
@@ -11,7 +13,9 @@
   {
     "id": "BK-002",
     "name": "Twitter R10",
+    "brand": "Twitter",
     "category": "Xe đạp đua",
+    "frameSize": ["M", "L", "XL"],
     "image": "bike02.png",
     "price": 14200000,
     "stock": 8,
@@ -20,7 +24,9 @@
   {
     "id": "BK-003",
     "name": "Trinx Free",
+    "brand": "Trinx",
     "category": "Xe đường phố (Touring)",
+    "frameSize": ["S", "M"],
     "image": "bike03.png",
     "price": 5800000,
     "stock": 20,
@@ -29,7 +35,9 @@
   {
     "id": "BK-004",
     "name": "Fornix Prava",
+    "brand": "Fornix",
     "category": "Xe đạp gấp",
+    "frameSize": ["S"],
     "image": "bike04.png",
     "price": 4100000,
     "stock": 5,
@@ -38,7 +46,9 @@
   {
     "id": "BK-005",
     "name": "City Classic 26",
+    "brand": "Giant",
     "category": "Cổ điển",
+    "frameSize": ["S", "M"],
     "image": "bike05.png",
     "price": 4500000,
     "stock": 4,
@@ -47,7 +57,9 @@
   {
     "id": "BK-006",
     "name": "Giant XTC SLR 29",
+    "brand": "Giant",
     "category": "Xe địa hình (MTB)",
+    "frameSize": ["L", "XL"],
     "image": "bike06.png",
     "price": 18900000,
     "stock": 6,
@@ -56,7 +68,9 @@
   {
     "id": "BK-007",
     "name": "Trek Marlin 5",
+    "brand": "Trek",
     "category": "Xe địa hình (MTB)",
+    "frameSize": ["S", "M", "L", "XL"],
     "image": "bike07.png",
     "price": 16500000,
     "stock": 4,
@@ -65,7 +79,9 @@
   {
     "id": "BK-008",
     "name": "Giant Escape 2 Disc",
+    "brand": "Giant",
     "category": "Xe đạp Hybrid",
+    "frameSize": ["S", "M", "L"],
     "image": "bike08.png",
     "price": 12900000,
     "stock": 11,
@@ -74,7 +90,9 @@
   {
     "id": "BK-009",
     "name": "Specialized Allez",
+    "brand": "Specialized",
     "category": "Xe đạp đua",
+    "frameSize": ["M", "L"],
     "image": "bike09.png",
     "price": 24500000,
     "stock": 3,
@@ -83,7 +101,9 @@
   {
     "id": "BK-010",
     "name": "Cannondale CAAD Optimo 4",
+    "brand": "Cannondale",
     "category": "Xe đạp đua",
+    "frameSize": ["S", "M", "L"],
     "image": "bike10.png",
     "price": 27900000,
     "stock": 7,
@@ -92,7 +112,9 @@
   {
     "id": "BK-011",
     "name": "Giant Explore E+ 2",
+    "brand": "Giant",
     "category": "Xe đạp điện trợ lực",
+    "frameSize": ["M", "L"],
     "image": "bike11.png",
     "price": 32900000,
     "stock": 3,
@@ -101,7 +123,9 @@
   {
     "id": "BK-012",
     "name": "Giant Escape 3",
+    "brand": "Giant",
     "category": "Xe đường phố (Touring)",
+    "frameSize": ["S", "M"],
     "image": "bike12.png",
     "price": 8900000,
     "stock": 9,
@@ -110,7 +134,9 @@
   {
     "id": "BK-013",
     "name": "Trek FX 1 Disc",
+    "brand": "Trek",
     "category": "Xe đường phố (Touring)",
+    "frameSize": ["S", "M", "L"],
     "image": "bike13.png",
     "price": 11900000,
     "stock": 6,
@@ -119,7 +145,9 @@
   {
     "id": "BK-014",
     "name": "E-Bike Gấp 20",
+    "brand": "Fornix",
     "category": "Xe đạp điện",
+    "frameSize": ["S"],
     "image": "bike14.png",
     "price": 6900000,
     "stock": 2,
@@ -128,7 +156,9 @@
   {
     "id": "BK-015",
     "name": "Dahon SUV D6",
+    "brand": "Dahon",
     "category": "Xe đạp gấp",
+    "frameSize": ["S"],
     "image": "bike15.png",
     "price": 9500000,
     "stock": 10,
@@ -137,7 +167,9 @@
   {
     "id": "BK-016",
     "name": "Classic Lady 26",
+    "brand": "Trinx",
     "category": "Cổ điển",
+    "frameSize": ["S", "M"],
     "image": "bike16.png",
     "price": 4200000,
     "stock": 14,
@@ -146,7 +178,9 @@
   {
     "id": "BK-017",
     "name": "Giant Explore E+ 1",
+    "brand": "Giant",
     "category": "Xe đạp điện trợ lực",
+    "frameSize": ["L", "XL"],
     "image": "bike17.png",
     "price": 39900000,
     "stock": 5,
@@ -155,7 +189,9 @@
   {
     "id": "BK-018",
     "name": "Twitter Gravel GR02",
+    "brand": "Twitter",
     "category": "Xe đạp Hybrid",
+    "frameSize": ["S", "M", "L"],
     "image": "bike18.png",
     "price": 17900000,
     "stock": 4,
@@ -164,7 +200,9 @@
   {
     "id": "BK-019",
     "name": "Merida Silex 200",
+    "brand": "Merida",
     "category": "Xe đạp Hybrid",
+    "frameSize": ["M", "L"],
     "image": "bike19.png",
     "price": 23900000,
     "stock": 2,
@@ -173,7 +211,9 @@
   {
     "id": "BK-020",
     "name": "City E-Bike 350",
+    "brand": "Fornix",
     "category": "Xe đạp điện",
+    "frameSize": ["S", "M"],
     "image": "bike20.png",
     "price": 18900000,
     "stock": 0,
@@ -182,12 +222,27 @@
   {
     "id": "BK-021",
     "name": "Giant ATX",
+    "brand": "Giant",
     "category": "Xe địa hình (MTB)",
+    "frameSize": ["S", "M", "L"],
     "image": "bike01.png",
     "price": 8500000,
     "originalPrice": 10500000,
     "discount": "Giảm 19%",
     "stock": 15,
+    "status": "Còn hàng"
+  },
+  {
+    "id": "BK-022",
+    "name": "Merida Big Nine 300",
+    "brand": "Merida",
+    "category": "Xe địa hình (MTB)",
+    "frameSize": ["M", "L", "XL"],
+    "image": "bike02.png",
+    "price": 15900000,
+    "originalPrice": 17500000,
+    "discount": "Giảm 9%",
+    "stock": 7,
     "status": "Còn hàng"
   }
 ]
