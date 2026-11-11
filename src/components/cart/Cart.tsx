@@ -1,71 +1,49 @@
 import { useState } from 'react';
 import type { CheckoutItem } from '../../services/checkoutService';
+import { useCart } from '../../context/CartContext';
 
 interface CartProps {
     onContinueShopping: () => void;
-    onCheckout: (items: CheckoutItem[], clearCart: () => void) => void;
+    onCheckout: () => void;
 }
 
 export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
-    const [cartItems, setCartItems] = useState([
-        {
-            id: 'BK-001',
-            name: 'Giant ATX - Xe địa hình (MTB)',
-            price: 8500000,
-            quantity: 1,
-            image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=300&q=80',
-        },
-        {
-            id: 'BK-003',
-            name: 'Trinx Free - Xe đường phố (Touring)',
-            price: 5800000,
-            quantity: 2,
-            image: 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?auto=format&fit=crop&w=300&q=80',
-        },
-    ]);
-
-    const clearCart = () => setCartItems([]);
-
-    const updateQuantity = (id: string, delta: number) => {
-        setCartItems(prev =>
-            prev
-                .map(item => {
-                    if (item.id === id) {
-                        const newQty = item.quantity + delta;
-                        return newQty > 0 ? { ...item, quantity: newQty } : null;
-                    }
-                    return item;
-                })
-                .filter(Boolean) as typeof cartItems
-        );
-    };
-
-    const removeItem = (id: string) => {
-        setCartItems(prev => prev.filter(item => item.id !== id));
-    };
-
-    const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const shipping = cartItems.length > 0 ? 150000 : 0;
-    const total = subtotal + shipping;
+    const {
+        cartItems,
+        totalCount,
+        subtotal,
+        shippingFee,
+        totalAmount,
+        updateQuantity,
+        removeFromCart,
+        clearCart,
+    } = useCart();
 
     return (
         <section className="container py-5">
-            <div className="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+            <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 border-bottom pb-3">
                 <div>
                     <h3 className="fw-bold text-dark m-0">
                         <i className="fa-solid fa-cart-shopping me-2 text-primary"></i>
                         Giỏ Hàng Của Bạn
                     </h3>
-                    <small className="text-muted">Quản lý và kiểm tra danh sách sản phẩm trước khi thanh toán</small>
+                    <small className="text-muted">{totalCount} sản phẩm trong giỏ</small>
                 </div>
-                <button
-                    type="button"
-                    className="btn btn-outline-dark btn-sm d-flex align-items-center gap-2"
-                    onClick={onContinueShopping}
-                >
-                    <i className="fa-solid fa-arrow-left"></i>
-                    <span>Tiếp tục mua hàng</span>
-                </button>
+                <div className="d-flex flex-wrap gap-2">
+                    {cartItems.length > 0 && (
+                        <button type="button" className="btn btn-outline-danger btn-sm" onClick={clearCart}>
+                            <i className="fa-solid fa-trash-can me-2"></i>Xóa toàn bộ
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        className="btn btn-outline-dark btn-sm d-flex align-items-center gap-2"
+                        onClick={onContinueShopping}
+                    >
+                        <i className="fa-solid fa-arrow-left"></i>
+                        <span>Tiếp tục mua hàng</span>
+                    </button>
+                </div>
             </div>
 
             {cartItems.length === 0 ? (
@@ -120,6 +98,7 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                                     <button
                                                         className="btn btn-outline-secondary"
                                                         type="button"
+                                                        disabled={item.quantity <= 1}
                                                         onClick={() => updateQuantity(item.id, -1)}
                                                     >
                                                         -
@@ -143,7 +122,7 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                                 <button
                                                     className="btn btn-sm btn-outline-danger border-0"
                                                     title="Xóa sản phẩm"
-                                                    onClick={() => removeItem(item.id)}
+                                                    onClick={() => removeFromCart(item.id)}
                                                 >
                                                     <i className="fa-solid fa-trash-can"></i>
                                                 </button>
@@ -168,20 +147,20 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                 </div>
                                 <div className="d-flex justify-content-between mb-3">
                                     <span className="text-muted">Phí giao hàng:</span>
-                                    <span className="fw-semibold">{shipping.toLocaleString('vi-VN')} đ</span>
+                                    <span className="fw-semibold">{shippingFee.toLocaleString('vi-VN')} đ</span>
                                 </div>
                                 <hr />
                                 <div className="d-flex justify-content-between align-items-center mb-4">
                                     <span className="fw-bold fs-5">Tổng cộng:</span>
                                     <span className="fw-bold text-danger fs-4">
-                                        {total.toLocaleString('vi-VN')} đ
+                                        {totalAmount.toLocaleString('vi-VN')} đ
                                     </span>
                                 </div>
 
                                 <button
                                     type="button"
                                     className="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm mb-2"
-                                    onClick={() => onCheckout(cartItems, clearCart)}
+                                    onClick={onCheckout}
                                 >
                                     Tiến Hành Thanh Toán
                                 </button>

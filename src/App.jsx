@@ -2,23 +2,31 @@ import { useState } from 'react';
 import './App.css';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider, useCart } from './context/CartContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Hero from './components/layout/Hero';
-import BiketList from './components/home/BiketList';
+import BikeList from './components/home/BikeList';
 import Cart from './components/cart/Cart';
 import OrderHistory from './components/history/OrderHistory';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import NotFound from './components/common/NotFound';
 import LoginModal from './components/auth/LoginModal';
+import BikeDetail from './components/home/BikeDetail';
+import Checkout from './components/checkout/Checkout';
+import OrderSuccess from './components/checkout/OrderSuccess';
 
 function MainLayout() {
+  const { cartItems, addToCart, clearCart } = useCart();
   const [currentTab, setCurrentTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [selectedBike, setSelectedBike] = useState(null);
+  const [createdOrder, setCreatedOrder] = useState(null);
 
   const handleSelectTab = (tabOrCategory) => {
     setSearchKeyword('');
+    setSelectedBike(null);
     if (['home', 'cart', 'history', 'not-found'].includes(tabOrCategory)) {
       setCurrentTab(tabOrCategory);
       if (tabOrCategory === 'home') {
@@ -34,6 +42,7 @@ function MainLayout() {
     setCurrentTab('home');
     setSelectedCategory('Tất cả');
     setSearchKeyword(keyword);
+    setSelectedBike(null);
   };
 
   return (
@@ -43,27 +52,60 @@ function MainLayout() {
         selectedCategory={selectedCategory}
         onSelectTab={handleSelectTab}
         onSearch={handleSearch}
-        cartCount={2}
       />
 
       <main className="flex-grow-1">
-        {currentTab === 'home' && (
-          <>
-            {selectedCategory === 'Tất cả' && !searchKeyword && (
-              <div className="app-container">
-                <Hero />
-              </div>
-            )}
-            <BiketList
-              selectedCategory={selectedCategory}
-              searchKeyword={searchKeyword}
-              onSelectTab={handleSelectTab}
-            />
-          </>
-        )}
+          {currentTab === 'home' && (
+            <>
+              {selectedBike ? (
+                  <BikeDetail
+                      bike={selectedBike}
+                      onBack={() => setSelectedBike(null)}
+                      onSelectTab={handleSelectTab}
+                      onAddToCart={addToCart}
+                  />
+              ) : (
+                 <>
+                     {selectedCategory === 'Tất cả' && !searchKeyword && (
+                         <div className="app-container">
+                             <Hero />
+                         </div>
+                     )}
+                     <BikeList
+                         selectedCategory={selectedCategory}
+                         searchKeyword={searchKeyword}
+                         onSelectTab={handleSelectTab}
+                         onSelectBike={(bike) => setSelectedBike(bike)}
+                     />
+                 </>
+              )}
+            </>
+          )}
 
         {currentTab === 'cart' && (
-          <Cart onContinueShopping={() => setCurrentTab('home')} />
+          <Cart
+            onContinueShopping={() => setCurrentTab('home')}
+            onCheckout={() => setCurrentTab('checkout')}
+          />
+        )}
+
+        {currentTab === 'checkout' && (
+          <Checkout
+            items={cartItems}
+            onCancel={() => setCurrentTab('cart')}
+            onOrderCreated={(order) => {
+              clearCart();
+              setCreatedOrder(order);
+              setCurrentTab('order-success');
+            }}
+          />
+        )}
+
+        {currentTab === 'order-success' && createdOrder && (
+          <OrderSuccess
+            order={createdOrder}
+            onContinueShopping={() => setCurrentTab('home')}
+          />
         )}
 
         {currentTab === 'history' && (
@@ -77,6 +119,8 @@ function MainLayout() {
 
         {currentTab !== 'home' &&
           currentTab !== 'cart' &&
+          currentTab !== 'checkout' &&
+          currentTab !== 'order-success' &&
           currentTab !== 'history' && (
             <NotFound
               onGoHome={() => setCurrentTab('home')}
@@ -95,7 +139,9 @@ export default function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <MainLayout />
+          <CartProvider>
+            <MainLayout />
+          </CartProvider>
       </AuthProvider>
     </ToastProvider>
   );

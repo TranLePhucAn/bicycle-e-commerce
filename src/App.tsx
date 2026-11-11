@@ -2,17 +2,18 @@ import { lazy, Suspense, useState } from 'react';
 import './App.css';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider, useCart } from './context/CartContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Hero from './components/layout/Hero';
-import BiketList from './components/home/BiketList.tsx';
+import BiketList from './components/home/BikeList.tsx';
 import Cart from './components/cart/Cart';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import NotFound from './components/common/NotFound';
 import LoginModal from './components/auth/LoginModal';
 import Checkout from './components/checkout/Checkout';
 import OrderSuccess from './components/checkout/OrderSuccess';
-import type { CheckoutItem, OrderRecord } from './services/checkoutService';
+import type { OrderRecord } from './services/checkoutService';
 
 const OrderHistory = lazy(() => import('./components/history/OrderHistory'));
 
@@ -23,6 +24,7 @@ function MainLayout() {
   const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
   const [clearCart, setClearCart] = useState<() => void>(() => () => undefined);
   const [createdOrder, setCreatedOrder] = useState<OrderRecord | null>(null);
+  const { cartItems, clearCart } = useCart();
 
   const handleSelectTab = (tabOrCategory: string | string[]) => {
     setSearchKeyword('');
@@ -51,6 +53,7 @@ function MainLayout() {
         onSearch={handleSearch}
         cartCount={2}
       />
+      <Navbar currentTab={currentTab} onSelectTab={setCurrentTab} />
 
       <main className="flex-grow-1">
         {currentTab === 'home' && (
@@ -71,17 +74,13 @@ function MainLayout() {
         <div style={{ display: currentTab === 'cart' ? 'block' : 'none' }}>
           <Cart
             onContinueShopping={() => setCurrentTab('home')}
-            onCheckout={(items, clear) => {
-              setCheckoutItems(items);
-              setClearCart(() => clear);
-              setCurrentTab('checkout');
-            }}
+            onCheckout={() => setCurrentTab('checkout')}
           />
         </div>
 
         {currentTab === 'checkout' && (
           <Checkout
-            items={checkoutItems}
+            items={cartItems}
             onCancel={() => setCurrentTab('cart')}
             onOrderCreated={(order) => {
               clearCart();
@@ -131,7 +130,9 @@ export default function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <MainLayout />
+          <CartProvider>
+            <MainLayout />
+          </CartProvider>
       </AuthProvider>
     </ToastProvider>
   );

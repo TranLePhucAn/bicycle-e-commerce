@@ -1,16 +1,16 @@
-import {useState, useMemo, useEffect} from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import bikesData from '../../data/bikes.json';
 import BikeCard from './BikeCard';
 import '../../styles/home.css';
 
-interface BikeListProps {
+export default function BikeList({selectedCategory = 'Tất cả', searchKeyword = '', onSelectTab, onSelectBike}: {
     selectedCategory?: string | string[];
     searchKeyword?: string;
     onSelectTab?: (category: string) => void;
-}
-
-export default function ProductList({ selectedCategory = 'Tất cả', searchKeyword = '', onSelectTab }: BikeListProps) {
+    onSelectBike?: (bike: any) => void;
+}) {
     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+    const [selectedFrameSizes, setSelectedFrameSizes] = useState<string[]>([]);
     const [priceRange, setPriceRange] = useState<string>('all');
     const [onlyDiscount, setOnlyDiscount] = useState<boolean>(false);
     const [sortBy, setSortBy] = useState<string>('newest');
@@ -23,10 +23,12 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
     const [currentPage, setCurrentPage] = useState<number>(1);
     const itemsPerPage = 8;
 
+    const allFrameSizes = ['S', 'M', 'L', 'XL'];
+
     useEffect(() => {
         setCurrentPage(1);
         setVisibleCount(12);
-    }, [selectedCategory, searchKeyword, selectedBrands, priceRange, onlyDiscount, sortBy]);
+    }, [selectedCategory, searchKeyword, selectedBrands, selectedFrameSizes, priceRange, onlyDiscount, sortBy]);
 
     const availableBrands = useMemo(() => {
         const brands = Array.from(new Set(bikesData.map((b: any) => b.brand).filter(Boolean)));
@@ -53,6 +55,13 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
 
         if (!isHomePage && selectedBrands.length > 0) {
             result = result.filter((bike: any) => selectedBrands.includes(bike.brand));
+        }
+
+        if (!isHomePage && selectedFrameSizes.length > 0) {
+            result = result.filter((bike: any) => {
+                const bikeSizes = Array.isArray(bike.frameSize) ? bike.frameSize : [bike.frameSize];
+                return selectedFrameSizes.some((size) => bikeSizes.includes(size));
+            });
         }
 
         if (!isHomePage && priceRange !== 'all') {
@@ -82,11 +91,17 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
         }
 
         return result;
-    }, [selectedCategory, searchKeyword, selectedBrands, onlyDiscount, priceRange, sortBy, isHomePage, isSearchPage]);
+    }, [selectedCategory, searchKeyword, selectedBrands, selectedFrameSizes, onlyDiscount, priceRange, sortBy, isHomePage, isSearchPage]);
 
     const handleBrandToggle = (brand: string) => {
         setSelectedBrands((prev) =>
             prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
+        );
+    };
+
+    const handleFrameSizeToggle = (size: string) => {
+        setSelectedFrameSizes((prev) =>
+            prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
         );
     };
 
@@ -202,7 +217,7 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                                 Trang chủ
                             </a>
                         </li>
-                        <li className="breadcrumb-item active text-success fw-semibold" aria-current="page">
+                        <li className="breadcrumb-item active text-dark fw-bold" aria-current="page">
                             Kết quả tìm kiếm
                         </li>
                     </ol>
@@ -215,11 +230,14 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                 </div>
 
                 {filteredBikes.length > 0 ? (
-                    <div className="row g-4">
-                        {filteredBikes.map((bike: any) => (
-                            <BikeCard key={bike.id} bike={bike} />
-                        ))}
-                    </div>
+                    <>
+                        <div className="row g-4">
+                            {paginatedBikes.map((bike: any) => (
+                                <BikeCard key={bike.id} bike={bike} onDetailClick={onSelectBike} />
+                            ))}
+                        </div>
+                        {renderPagination()}
+                    </>
                 ) : (
                     <div className="bg-white text-center py-5 rounded border text-muted">
                         <i className="fa-solid fa-magnifying-glass fs-1 mb-2 text-secondary"></i>
@@ -241,7 +259,7 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
 
                 <div className="row g-4">
                     {paginatedBikes.map((bike: any) => (
-                        <BikeCard key={bike.id} bike={bike} />
+                        <BikeCard key={bike.id} bike={bike} onDetailClick={onSelectBike} />
                     ))}
                 </div>
                 {visibleCount < filteredBikes.length && (
@@ -257,6 +275,7 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
             </section>
         );
     }
+
     return (
         <section className="container py-3">
             <nav aria-label="breadcrumb" className="mb-3">
@@ -273,8 +292,8 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                             Trang chủ
                         </a>
                     </li>
-                    <li className="breadcrumb-item active text-success fw-semibold" aria-current="page">
-                        {categoryName.toUpperCase()}
+                    <li className="breadcrumb-item active text-dark fw-bold" aria-current="page">
+                        {categoryName}
                     </li>
                 </ol>
             </nav>
@@ -315,6 +334,28 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                                             {brand}
                                         </label>
                                     </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <hr/>
+
+                        <div className="mb-4">
+                            <h6 className="fw-bold text-dark mb-2">Kích thước khung</h6>
+                            <div className="d-flex flex-wrap gap-2">
+                                {allFrameSizes.map((size) => (
+                                    <button
+                                        key={size}
+                                        type="button"
+                                        className={`btn btn-sm ${
+                                            selectedFrameSizes.includes(size)
+                                                ? 'btn-dark'
+                                                : 'btn-outline-secondary'
+                                        }`}
+                                        onClick={() => handleFrameSizeToggle(size)}
+                                    >
+                                        Size {size}
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -419,7 +460,7 @@ export default function ProductList({ selectedCategory = 'Tất cả', searchKey
                         <>
                             <div className="row g-4">
                                 {paginatedBikes.map((bike: any) => (
-                                    <BikeCard key={bike.id} bike={bike} />
+                                    <BikeCard key={bike.id} bike={bike} onDetailClick={onSelectBike} />
                                 ))}
                             </div>
                             {renderPagination()}

@@ -1,4 +1,15 @@
-export default function BikeCard({ bike }: { bike: any }) {
+import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
+
+export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailClick?: (bike: any) => void }) {
+    const { addToCart } = useCart();
+    const { showToast } = useToast();
+
+    const handleAddToCart = () => {
+        addToCart(bike);
+        showToast(`Đã thêm "${bike.name}" vào giỏ hàng!`, 'success');
+    };
+
     const getStatusBadgeClass = (status: any) => {
         switch (status) {
             case 'Còn hàng':
@@ -25,24 +36,34 @@ export default function BikeCard({ bike }: { bike: any }) {
                     {bike.status}
                 </span>
 
-                <div className="product-img-wrapper d-flex align-items-center justify-content-center bg-light p-2" style={{ height: '180px' }}>
+                <div
+                    className="product-img-wrapper d-flex align-items-center justify-content-center bg-light p-2"
+                    style={{ height: '180px', cursor: 'pointer' }}
+                    onClick={() => onDetailClick?.(bike)}
+                >
                     <img src={`/src/assets/images/${bike.image}`} alt={bike.name} className="w-100 h-100 object-fit-contain" />
                 </div>
 
                 <div className="card-body d-flex flex-column">
                     <small className="text-muted mb-1">{bike.category}</small>
-                    <h5 className="card-title fs-6 fw-bold text-dark text-truncate mb-2" title={bike.name}>
+
+                    <h5
+                        className="card-title fs-6 fw-bold text-dark text-truncate mb-2"
+                        title={bike.name}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => onDetailClick?.(bike)}
+                    >
                         {bike.name}
                     </h5>
 
                     <div className="mt-auto">
-                        <div className="d-flex align-items-end gap-2 mb-2">
+                        <div className="d-flex flex-column justify-content-start mb-2" style={{ minHeight: '48px' }}>
                             <div className="text-danger fw-bold fs-5 lh-1">
-                                {bike.price.toLocaleString('vi-VN')} đ
+                                {bike.price?.toLocaleString('vi-VN')} đ
                             </div>
                             {bike.originalPrice && (
-                                <div className="text-muted text-decoration-line-through lh-1" style={{ fontSize: '13px' }}>
-                                    {bike.originalPrice.toLocaleString('vi-VN')} đ
+                                <div className="text-muted text-decoration-line-through mt-1" style={{ fontSize: '13px' }}>
+                                    {bike.originalPrice?.toLocaleString('vi-VN')} đ
                                 </div>
                             )}
                         </div>
@@ -54,6 +75,8 @@ export default function BikeCard({ bike }: { bike: any }) {
 
                         <button
                             className={`btn w-100 btn-sm py-2 fw-semibold ${bike.stock === 0 ? 'btn-secondary disabled' : 'btn-dark'}`}
+                            onClick={handleAddToCart}
+                            disabled={bike.stock === 0}
                         >
                             <i className="fa-solid fa-cart-plus me-2"></i>
                             {bike.stock === 0 ? 'Tạm hết hàng' : 'Thêm vào giỏ'}
