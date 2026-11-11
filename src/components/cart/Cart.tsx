@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import type { CheckoutItem } from '../../services/checkoutService';
 import { useCart } from '../../context/CartContext';
 
 interface CartProps {
