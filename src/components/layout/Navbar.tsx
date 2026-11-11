@@ -119,21 +119,15 @@ export default function Navbar({
                                 type="button"
                                 onClick={(e) => handleTabClick(e, 'cart')}
                                 className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap ${
-                                    currentTab === 'cart' ? 'btn-primary text-white' : 'btn-outline-dark'
+                                    currentTab === 'cart' ? 'btn-primary text-white' : 'btn-outline-secondary'
                                 }`}
-                                style={
-                                    currentTab === 'cart'
-                                        ? { backgroundColor: '#3b82f6', borderColor: '#3b82f6' }
-                                        : { border: '1px solid #1e293b', color: '#1e293b' }
-                                }
                             >
                                 <i className="fa-solid fa-bag-shopping"></i>
-                                <span className={`fw-semibold small ${currentTab === 'cart' ? 'text-white' : 'text-dark'}`}>
-                                    Giỏ hàng
-                                </span>
+                                <span className="fw-semibold small">Giỏ hàng</span>
                                 <span
-                                    className="badge fw-bold px-2 py-1 text-white rounded-pill"
-                                    style={{ backgroundColor: currentTab === 'cart' ? '#1e293b' : '#ef4444' }}
+                                    className={`badge fw-bold px-2 py-1 rounded-pill ${
+                                        currentTab === 'cart' ? 'bg-danger text-white' : 'bg-danger text-white'
+                                    }`}
                                 >
                                     {totalCount}
                                 </span>

@@ -3,13 +3,14 @@ import bikesData from '../../data/bikes.json';
 import BikeCard from './BikeCard';
 import '../../styles/home.css';
 
-export default function ProductList({selectedCategory = 'Tất cả', searchKeyword = '', onSelectTab, onSelectBike}: {
+export default function BikeList({selectedCategory = 'Tất cả', searchKeyword = '', onSelectTab, onSelectBike}: {
     selectedCategory?: string | string[];
     searchKeyword?: string;
     onSelectTab?: (category: string) => void;
     onSelectBike?: (bike: any) => void;
 }) {
     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+    const [selectedFrameSizes, setSelectedFrameSizes] = useState<string[]>([]);
     const [priceRange, setPriceRange] = useState<string>('all');
     const [onlyDiscount, setOnlyDiscount] = useState<boolean>(false);
     const [sortBy, setSortBy] = useState<string>('newest');
@@ -22,10 +23,12 @@ export default function ProductList({selectedCategory = 'Tất cả', searchKeyw
     const [currentPage, setCurrentPage] = useState<number>(1);
     const itemsPerPage = 8;
 
+    const allFrameSizes = ['S', 'M', 'L', 'XL'];
+
     useEffect(() => {
         setCurrentPage(1);
         setVisibleCount(12);
-    }, [selectedCategory, searchKeyword, selectedBrands, priceRange, onlyDiscount, sortBy]);
+    }, [selectedCategory, searchKeyword, selectedBrands, selectedFrameSizes, priceRange, onlyDiscount, sortBy]);
 
     const availableBrands = useMemo(() => {
         const brands = Array.from(new Set(bikesData.map((b: any) => b.brand).filter(Boolean)));
@@ -52,6 +55,13 @@ export default function ProductList({selectedCategory = 'Tất cả', searchKeyw
 
         if (!isHomePage && selectedBrands.length > 0) {
             result = result.filter((bike: any) => selectedBrands.includes(bike.brand));
+        }
+
+        if (!isHomePage && selectedFrameSizes.length > 0) {
+            result = result.filter((bike: any) => {
+                const bikeSizes = Array.isArray(bike.frameSize) ? bike.frameSize : [bike.frameSize];
+                return selectedFrameSizes.some((size) => bikeSizes.includes(size));
+            });
         }
 
         if (!isHomePage && priceRange !== 'all') {
@@ -81,11 +91,17 @@ export default function ProductList({selectedCategory = 'Tất cả', searchKeyw
         }
 
         return result;
-    }, [selectedCategory, searchKeyword, selectedBrands, onlyDiscount, priceRange, sortBy, isHomePage, isSearchPage]);
+    }, [selectedCategory, searchKeyword, selectedBrands, selectedFrameSizes, onlyDiscount, priceRange, sortBy, isHomePage, isSearchPage]);
 
     const handleBrandToggle = (brand: string) => {
         setSelectedBrands((prev) =>
             prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
+        );
+    };
+
+    const handleFrameSizeToggle = (size: string) => {
+        setSelectedFrameSizes((prev) =>
+            prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
         );
     };
 
@@ -318,6 +334,28 @@ export default function ProductList({selectedCategory = 'Tất cả', searchKeyw
                                             {brand}
                                         </label>
                                     </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <hr/>
+
+                        <div className="mb-4">
+                            <h6 className="fw-bold text-dark mb-2">Kích thước khung</h6>
+                            <div className="d-flex flex-wrap gap-2">
+                                {allFrameSizes.map((size) => (
+                                    <button
+                                        key={size}
+                                        type="button"
+                                        className={`btn btn-sm ${
+                                            selectedFrameSizes.includes(size)
+                                                ? 'btn-dark'
+                                                : 'btn-outline-secondary'
+                                        }`}
+                                        onClick={() => handleFrameSizeToggle(size)}
+                                    >
+                                        Size {size}
+                                    </button>
                                 ))}
                             </div>
                         </div>
