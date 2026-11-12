@@ -14,6 +14,7 @@ import LoginModal from './components/auth/LoginModal';
 import Checkout from './components/checkout/Checkout';
 import OrderSuccess from './components/checkout/OrderSuccess';
 import type { OrderRecord } from './services/checkoutService';
+import AboutPage from "./components/about/AboutPage.tsx";
 
 const OrderHistory = lazy(() => import('./components/history/OrderHistory'));
 
@@ -21,14 +22,14 @@ function MainLayout() {
   const [currentTab, setCurrentTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string | string[]>('Tất cả');
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
-  const [clearCart, setClearCart] = useState<() => void>(() => () => undefined);
+  // const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
+  // const [clearCart, setClearCart] = useState<() => void>(() => () => undefined);
   const [createdOrder, setCreatedOrder] = useState<OrderRecord | null>(null);
   const { cartItems, clearCart } = useCart();
 
   const handleSelectTab = (tabOrCategory: string | string[]) => {
     setSearchKeyword('');
-    if (typeof tabOrCategory === 'string' && ['home', 'cart', 'history', 'not-found'].includes(tabOrCategory)) {
+    if (typeof tabOrCategory === 'string' && ['home', 'cart', 'history', 'about', 'not-found'].includes(tabOrCategory)) {
       setCurrentTab(tabOrCategory);
       if (tabOrCategory === 'home') setSelectedCategory('Tất cả');
       return;
@@ -51,9 +52,9 @@ function MainLayout() {
         selectedCategory={selectedCategory}
         onSelectTab={handleSelectTab}
         onSearch={handleSearch}
-        cartCount={2}
+        // cartCount={2}
       />
-      <Navbar currentTab={currentTab} onSelectTab={setCurrentTab} />
+      {/*<Navbar currentTab={currentTab} onSelectTab={setCurrentTab} />*/}
 
       <main className="flex-grow-1">
         {currentTab === 'home' && (
@@ -108,11 +109,16 @@ function MainLayout() {
           </ProtectedRoute>
         )}
 
-        {        currentTab !== 'home' &&
+          {currentTab === 'about' && (
+              <AboutPage onGoHome={() => handleSelectTab('home')} />
+          )}
+
+        {currentTab !== 'home' &&
         currentTab !== 'cart' &&
         currentTab !== 'history' &&
         currentTab !== 'checkout' &&
-          currentTab !== 'order-success' && (
+        currentTab !== 'about' &&
+        currentTab !== 'order-success' && (
             <NotFound
               onGoHome={() => setCurrentTab('home')}
               onGoCart={() => setCurrentTab('cart')}

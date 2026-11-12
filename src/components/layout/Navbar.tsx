@@ -11,11 +11,11 @@ interface NavbarProps {
 }
 
 export default function Navbar({
-    currentTab = 'home',
-    selectedCategory = 'Tất cả',
-    onSelectTab,
-    onSearch,
-}: NavbarProps) {
+                                   currentTab = 'home',
+                                   selectedCategory = 'Tất cả',
+                                   onSelectTab,
+                                   onSearch,
+                               }: NavbarProps) {
     const { user, isLoggedIn, logout, openLoginModal } = useAuth();
     const { showToast } = useToast();
     const { totalCount } = useCart();
@@ -125,9 +125,7 @@ export default function Navbar({
                                 <i className="fa-solid fa-bag-shopping"></i>
                                 <span className="fw-semibold small">Giỏ hàng</span>
                                 <span
-                                    className={`badge fw-bold px-2 py-1 rounded-pill ${
-                                        currentTab === 'cart' ? 'bg-danger text-white' : 'bg-danger text-white'
-                                    }`}
+                                    className="badge fw-bold px-2 py-1 rounded-pill bg-danger text-white"
                                 >
                                     {totalCount}
                                 </span>
@@ -258,13 +256,13 @@ export default function Navbar({
                                     XE ĐIỆN & GẤP
                                 </a>
                             </li>
-                            <li className="nav-item">
+                            <li className="nav-item" style={currentTab === 'about' ? { backgroundColor: '#3b82f6' } : {}}>
                                 <a
-                                    className="nav-link px-3 py-3 text-white"
+                                    className={`nav-link px-3 py-3 text-white ${currentTab === 'about' ? 'active' : ''}`}
                                     href="#"
-                                    onClick={(e) => handleTabClick(e, 'home')}
+                                    onClick={(e) => handleTabClick(e, 'about')}
                                 >
-                                    PHỤ KIỆN
+                                    VỀ CHÚNG TÔI
                                 </a>
                             </li>
                             <li className="nav-item">
