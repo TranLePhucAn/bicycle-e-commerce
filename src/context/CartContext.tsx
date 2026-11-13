@@ -2,11 +2,14 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 
 export interface CartItem {
     id: string;
+    originalBikeId?: string;
     name: string;
     price: number;
     quantity: number;
     image: string;
     category?: string;
+    selectedSize?: string;
+    selectedColor?: string;
 }
 
 interface CartContextValue {
@@ -76,11 +79,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         const item: CartItem = {
             id: String(bike.id),
+            originalBikeId: bike.originalBikeId || String(bike.id),
             name: bike.name || 'Xe đạp',
             price: Number(bike.price) || 0,
             quantity,
             image: getImageUrl(bike.image),
             category: bike.category,
+            selectedSize: bike.selectedSize,
+            selectedColor: bike.selectedColor,
         };
 
         setCartItems((currentItems) => {

@@ -3,7 +3,7 @@ import bikesData from '../../data/bikes.json';
 import BikeCard from './BikeCard';
 import '../../styles/home.css';
 
-export default function BikeList({selectedCategory = 'Tất cả', searchKeyword = '', onSelectTab, onSelectBike}: {
+export default function BikeList({ selectedCategory = 'Tất cả', searchKeyword = '', onSelectTab, onSelectBike }: {
     selectedCategory?: string | string[];
     searchKeyword?: string;
     onSelectTab?: (category: string) => void;
@@ -304,7 +304,7 @@ export default function BikeList({selectedCategory = 'Tất cả', searchKeyword
                         <h5 className="fw-bold text-uppercase mb-1">BỘ LỌC</h5>
                         <p className="text-muted small mb-4">Giúp lọc nhanh sản phẩm bạn tìm kiếm</p>
 
-                        <hr/>
+                        <hr />
 
                         <div className="mb-4">
                             <h6 className="fw-bold text-dark mb-2">Thương hiệu</h6>
@@ -338,7 +338,7 @@ export default function BikeList({selectedCategory = 'Tất cả', searchKeyword
                             </div>
                         </div>
 
-                        <hr/>
+                        <hr />
 
                         <div className="mb-4">
                             <h6 className="fw-bold text-dark mb-2">Kích thước khung</h6>
@@ -360,7 +360,7 @@ export default function BikeList({selectedCategory = 'Tất cả', searchKeyword
                             </div>
                         </div>
 
-                        <hr/>
+                        <hr />
 
                         <div className="mb-3">
                             <h6 className="fw-bold text-dark mb-2">Giá sản phẩm</h6>
@@ -393,7 +393,7 @@ export default function BikeList({selectedCategory = 'Tất cả', searchKeyword
                             </div>
                         </div>
 
-                        <hr/>
+                        <hr />
 
                         <div className="mb-4">
                             <h6 className="fw-bold text-dark mb-2">Khuyến mãi</h6>

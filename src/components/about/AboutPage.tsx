@@ -63,7 +63,7 @@ export default function AboutPage({ onGoHome }: PageProps) {
                                     activeSection === 'faq' ? 'bg-light text-primary' : 'text-dark'
                                 }`}
                             >
-                                Câu hỏi thường gặp (FAQ)
+                                Câu hỏi thường gặp
                             </button>
                             <button
                                 type="button"
@@ -72,7 +72,7 @@ export default function AboutPage({ onGoHome }: PageProps) {
                                     activeSection === 'contact' ? 'bg-light text-primary' : 'text-dark'
                                 }`}
                             >
-                                Liên hệ & Showroom
+                                Liên hệ
                             </button>
                         </div>
                     </div>
@@ -165,7 +165,7 @@ function FAQContent() {
     return (
         <div>
             <h4 className="fw-bold text-dark pb-2 border-bottom">
-                Câu hỏi thường gặp (FAQ)
+                Câu hỏi thường gặp
             </h4>
             <div className="divide-y">
                 {faqs.map((item, idx) => (
@@ -247,10 +247,10 @@ function ContactContent() {
 
             <div className="bg-light border rounded-2 p-3 mb-4 small text-secondary">
                 <div className="mb-1">
-                    <strong className="text-dark">Địa chỉ showroom:</strong> Trường Đại học Nông Lâm TP.HCM
+                    <strong className="text-dark">Địa chỉ:</strong> Trường Đại học Nông Lâm TP.HCM
                 </div>
                 <div className="mb-1">
-                    <strong className="text-dark">Hotline tư vấn:</strong> 0123 456 789
+                    <strong className="text-dark">Hotline:</strong> 0123 456 789
                 </div>
                 <div>
                     <strong className="text-dark">Email:</strong> support@bikeshop.com
