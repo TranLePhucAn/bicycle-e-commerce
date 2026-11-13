@@ -15,6 +15,7 @@ import Checkout from './components/checkout/Checkout';
 import OrderSuccess from './components/checkout/OrderSuccess';
 import type { OrderRecord } from './services/checkoutService';
 import AboutPage from "./components/about/AboutPage.tsx";
+import BikeDetail from './components/home/BikeDetail';
 
 const OrderHistory = lazy(() => import('./components/history/OrderHistory'));
 
@@ -22,13 +23,15 @@ function MainLayout() {
   const [currentTab, setCurrentTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string | string[]>('Tất cả');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [selectedBike, setSelectedBike] = useState<any>(null);
   // const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
   // const [clearCart, setClearCart] = useState<() => void>(() => () => undefined);
   const [createdOrder, setCreatedOrder] = useState<OrderRecord | null>(null);
-  const { cartItems, clearCart } = useCart();
+  const {cartItems, addToCart, clearCart } = useCart();
 
   const handleSelectTab = (tabOrCategory: string | string[]) => {
     setSearchKeyword('');
+    setSelectedBike(null);
     if (typeof tabOrCategory === 'string' && ['home', 'cart', 'history', 'about', 'not-found'].includes(tabOrCategory)) {
       setCurrentTab(tabOrCategory);
       if (tabOrCategory === 'home') setSelectedCategory('Tất cả');
@@ -43,6 +46,7 @@ function MainLayout() {
     setCurrentTab('home');
     setSelectedCategory('Tất cả');
     setSearchKeyword(keyword);
+    setSelectedBike(null);
   };
 
   return (
@@ -54,23 +58,36 @@ function MainLayout() {
         onSearch={handleSearch}
         // cartCount={2}
       />
-      {/*<Navbar currentTab={currentTab} onSelectTab={setCurrentTab} />*/}
 
       <main className="flex-grow-1">
-        {currentTab === 'home' && (
-          <>
-            {selectedCategory === 'Tất cả' && !searchKeyword && (
-              <div className="app-container">
-                <Hero />
-              </div>
-            )}
-            <BiketList
-              selectedCategory={selectedCategory}
-              searchKeyword={searchKeyword}
-              onSelectTab={handleSelectTab}
-            />
-          </>
-        )}
+          {currentTab === 'home' && (
+            <>
+              {selectedBike ? (
+                <BikeDetail
+                   bike={selectedBike}
+                   onSelectTab={handleSelectTab}
+                   onAddToCart={addToCart}
+                />
+              ) : (
+                <>
+                  {selectedCategory === 'Tất cả' && !searchKeyword && (
+                    <div className="app-container">
+                        <Hero />
+                    </div>
+                  )}
+                   <BiketList
+                      selectedCategory={selectedCategory}
+                      searchKeyword={searchKeyword}
+                      onSelectTab={handleSelectTab}
+                      onSelectBike={(bike: any) => {
+                        setSelectedBike(bike);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                   />
+                </>
+              )}
+            </>
+          )}
 
         <div style={{ display: currentTab === 'cart' ? 'block' : 'none' }}>
           <Cart

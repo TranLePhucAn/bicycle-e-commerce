@@ -238,11 +238,35 @@
     "brand": "Merida",
     "category": "Xe địa hình (MTB)",
     "frameSize": ["M", "L", "XL"],
+    "colors": ["Đen nhám", "Xanh rêu", "Bạc Titan"],
     "image": "bike02.png",
+    "images": ["bike02.png", "bike03.png", "bike04.png"],
     "price": 15900000,
     "originalPrice": 17500000,
     "discount": "Giảm 9%",
     "stock": 7,
-    "status": "Còn hàng"
+    "status": "Còn hàng",
+    "specs": {
+      "Khung sườn và hệ thống lái": {
+        "Khung xe": "Hợp kim nhôm TFS III siêu nhẹ, thiết kế dây âm sườn thẩm mỹ.",
+        "Công nghệ khung": "Sơn tĩnh điện 3 lớp chống trầy xước, chịu lực cao.",
+        "Phuộc trước": "Suntour XCR32 LOR Air 100mm, có khóa hành trình (Lockout).",
+        "Ghi-đông (Tay lái)": "MERIDA EXPERT CC hợp kim nhôm, rộng 720mm.",
+        "Pô-tăng (Cổ lái)": "MERIDA COMP CC hợp kim nhôm góc nghiêng 6°."
+      },
+      "Bộ truyền động (Bộ chuyển số)": {
+        "Tay đề": "Shimano Deore M4100 / M5100 2x10 tốc độ.",
+        "Tốc độ": "20 tốc độ (2 đĩa trước x 10 líp sau).",
+        "Gạt đĩa (Trước)": "Shimano Deore M4100.",
+        "Củ đề / Gạt líp (Sau)": "Shimano Deore M4120 Shadow.",
+        "Đùi đĩa (Giò dĩa)": "Shimano Deore M4100-2 (36-26T) tối ưu lực đạp địa hình."
+      },
+      "Hệ thống phanh và bánh xe": {
+        "Hệ thống phanh": "Phanh đĩa thủy lực Shimano MT200 trước và sau, đĩa phanh 160mm.",
+        "Kích thước bánh": "29 inch chuyên dụng vượt địa hình.",
+        "Lốp xe": "Maxxis Ikon 29x2.2\" bám đường tốt.",
+        "Trọng lượng": "13.6 kg"
+      }
+    }
   }
 ]

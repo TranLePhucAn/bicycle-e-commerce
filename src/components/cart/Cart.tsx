@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import type { CheckoutItem } from '../../services/checkoutService';
 import { useCart } from '../../context/CartContext';
 
 interface CartProps {
@@ -74,19 +72,30 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    {cartItems.map(item => (
+                                    {cartItems.map((item: any) => (
                                         <tr key={item.id}>
                                             <td>
                                                 <div className="d-flex align-items-center gap-3">
                                                     <img
-                                                        src={item.image}
+                                                        src={item.image?.startsWith('/') || item.image?.startsWith('http')
+                                                            ? item.image
+                                                            : `/src/assets/images/${item.image}`}
                                                         alt={item.name}
                                                         className="rounded"
                                                         style={{ width: '60px', height: '60px', objectFit: 'cover' }}
                                                     />
                                                     <div>
                                                         <div className="fw-bold text-dark">{item.name}</div>
-                                                        <small className="text-muted">Mã: {item.id}</small>
+                                                        {(item.selectedSize || item.selectedColor) && (
+                                                            <small className="text-muted d-block mt-1">
+                                                                {[
+                                                                    item.selectedSize,
+                                                                    item.selectedColor,
+                                                                ]
+                                                                    .filter(Boolean)
+                                                                    .join(', ')}
+                                                            </small>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </td>
@@ -104,8 +113,8 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                                         -
                                                     </button>
                                                     <span className="input-group-text px-3 bg-white fw-bold">
-                                                            {item.quantity}
-                                                        </span>
+                                                        {item.quantity}
+                                                    </span>
                                                     <button
                                                         className="btn btn-outline-secondary"
                                                         type="button"
