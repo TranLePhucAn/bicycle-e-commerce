@@ -72,12 +72,12 @@ export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailC
                     </h5>
 
                     <div className="mt-auto">
-                        <div className="d-flex align-items-end gap-2 mb-2">
+                        <div className="d-flex flex-column justify-content-start mb-2" style={{ minHeight: '48px' }}>
                             <div className="text-danger fw-bold fs-5 lh-1">
                                 {bike.price?.toLocaleString('vi-VN')} đ
                             </div>
                             {bike.originalPrice && (
-                                <div className="text-muted text-decoration-line-through lh-1" style={{ fontSize: '13px' }}>
+                                <div className="text-muted text-decoration-line-through mt-1" style={{ fontSize: '13px' }}>
                                     {bike.originalPrice?.toLocaleString('vi-VN')} đ
                                 </div>
                             )}

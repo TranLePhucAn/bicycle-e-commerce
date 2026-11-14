@@ -5,12 +5,15 @@ import { apiRequest } from '../services/apiClient';
 
 export interface CartItem {
     id: string;
+    originalBikeId?: string;
     name: string;
     price: number;
     quantity: number;
     image: string;
     category?: string;
     stock?: number;
+    selectedSize?: string;
+    selectedColor?: string;
 }
 
 interface CartContextValue {
@@ -51,23 +54,68 @@ function getImageUrl(image: string | undefined) {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-    const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+        try {
+            const saved = localStorage.getItem(LEGACY_CART_KEY);
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const hasLoadedCart = useRef(false);
+    const previousUserIdRef = useRef<string | null>(null);
     const { showToast } = useToast();
     const { user } = useAuth();
 
     const refreshCart = useCallback(async () => {
-        const result = await apiRequest<CartResponse>('/api/cart');
-        const items = result.items.map((item) => ({ ...item, image: getImageUrl(item.image) }));
-        setCartItems(items);
-        setSelectedIds((currentIds) => {
-            const existingIds = new Set(items.map((item) => item.id));
-            const keptIds = currentIds.filter((id) => existingIds.has(id));
-            const newIds = items.map((item) => item.id).filter((id) => !currentIds.includes(id));
-            return [...keptIds, ...newIds];
-        });
+        try {
+            const result = await apiRequest<CartResponse>('/api/cart');
+            const items = result.items.map((item) => ({ ...item, image: getImageUrl(item.image) }));
+            setCartItems(items);
+            localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(items));
+            setSelectedIds((currentIds) => {
+                const existingIds = new Set(items.map((item) => item.id));
+                const keptIds = currentIds.filter((id) => existingIds.has(id));
+                const newIds = items.map((item) => item.id).filter((id) => !currentIds.includes(id));
+                return [...keptIds, ...newIds];
+            });
+        } catch {
+            // Offline or server not running: cartItems already loaded from localStorage
+        }
     }, []);
+
+    // Merge guest cart into user account cart on login
+    useEffect(() => {
+        if (!previousUserIdRef.current && user?.id) {
+            const mergeGuestCart = async () => {
+                const guestCartRaw = localStorage.getItem('bikeshop_guest_cart') || localStorage.getItem(LEGACY_CART_KEY);
+                if (guestCartRaw) {
+                    try {
+                        const guestItems: CartItem[] = JSON.parse(guestCartRaw);
+                        if (Array.isArray(guestItems) && guestItems.length > 0) {
+                            for (const gItem of guestItems) {
+                                await apiRequest('/api/cart/items', {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        bikeId: gItem.originalBikeId || gItem.id,
+                                        quantity: gItem.quantity,
+                                        selectedSize: gItem.selectedSize,
+                                        selectedColor: gItem.selectedColor,
+                                    }),
+                                }).catch(() => {});
+                            }
+                            localStorage.removeItem('bikeshop_guest_cart');
+                            showToast('Đã tự động gộp giỏ hàng khách vãng lai vào tài khoản của bạn!', 'info');
+                        }
+                    } catch {}
+                }
+                await refreshCart();
+            };
+            mergeGuestCart();
+        }
+        previousUserIdRef.current = user?.id || null;
+    }, [user?.id, refreshCart, showToast]);
 
     useEffect(() => {
         if (hasLoadedCart.current) {
@@ -89,23 +137,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
                             if (item?.id && Number.isInteger(item.quantity) && item.quantity > 0) {
                                 await apiRequest('/api/cart/items', {
                                     method: 'POST',
-                                    body: JSON.stringify({ bikeId: item.id, quantity: item.quantity }),
+                                    body: JSON.stringify({ bikeId: item.originalBikeId || item.id, quantity: item.quantity }),
                                 }).catch(() => {});
                             }
                         }
                     }
                 } catch (error) {
                     console.warn('Lỗi khi đọc giỏ hàng cũ từ localStorage:', error);
-                } finally {
-                    localStorage.removeItem(LEGACY_CART_KEY);
                 }
             }
             await refreshCart();
         };
 
-        loadCart().catch((error: Error) => {
-            showToast(error.message || 'Không thể tải giỏ hàng từ máy chủ.', 'danger');
-        });
+        loadCart().catch(() => {});
     }, [refreshCart, showToast, user?.id]);
 
     const addToCart = async (bike: any, quantity = 1) => {
@@ -113,17 +157,55 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             const result = await apiRequest<CartResponse>('/api/cart/items', {
                 method: 'POST',
-                body: JSON.stringify({ bikeId: bike.id, quantity }),
+                body: JSON.stringify({
+                    bikeId: bike.originalBikeId || bike.id,
+                    quantity,
+                    selectedSize: bike.selectedSize,
+                    selectedColor: bike.selectedColor,
+                }),
             });
-            setCartItems(result.items.map((item) => ({ ...item, image: getImageUrl(item.image) })));
+            const items = result.items.map((item) => ({ ...item, image: getImageUrl(item.image) }));
+            setCartItems(items);
+            localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(items));
+            if (!user) {
+                localStorage.setItem('bikeshop_guest_cart', JSON.stringify(items));
+            }
             setSelectedIds((currentIds) => currentIds.includes(String(bike.id))
                 ? currentIds
                 : [...currentIds, String(bike.id)]
             );
             return true;
-        } catch (error) {
-            showToast(error instanceof Error ? error.message : 'Không thể thêm sản phẩm vào giỏ.', 'danger');
-            return false;
+        } catch {
+            // Local fallback
+            setCartItems((prev) => {
+                const itemId = String(bike.id);
+                const existing = prev.find((item) => item.id === itemId);
+                let updated: CartItem[];
+                if (existing) {
+                    updated = prev.map((item) => item.id === itemId ? { ...item, quantity: item.quantity + quantity } : item);
+                } else {
+                    const newItem: CartItem = {
+                        id: itemId,
+                        originalBikeId: bike.originalBikeId || String(bike.id),
+                        name: bike.name || 'Xe đạp',
+                        price: Number(bike.price) || 0,
+                        quantity,
+                        image: getImageUrl(bike.image),
+                        category: bike.category,
+                        stock: bike.stock,
+                        selectedSize: bike.selectedSize,
+                        selectedColor: bike.selectedColor,
+                    };
+                    updated = [...prev, newItem];
+                }
+                localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(updated));
+                if (!user) {
+                    localStorage.setItem('bikeshop_guest_cart', JSON.stringify(updated));
+                }
+                return updated;
+            });
+            setSelectedIds((currentIds) => currentIds.includes(String(bike.id)) ? currentIds : [...currentIds, String(bike.id)]);
+            return true;
         }
     };
 
@@ -136,30 +218,44 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 method: 'PUT',
                 body: JSON.stringify({ quantity }),
             });
-            setCartItems(result.items.map((cartItem) => ({ ...cartItem, image: getImageUrl(cartItem.image) })));
-        } catch (error) {
-            showToast(error instanceof Error ? error.message : 'Không thể cập nhật số lượng.', 'danger');
+            const items = result.items.map((cartItem) => ({ ...cartItem, image: getImageUrl(cartItem.image) }));
+            setCartItems(items);
+            localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(items));
+        } catch {
+            setCartItems((prev) => {
+                const updated = prev.map((cartItem) => cartItem.id === id ? { ...cartItem, quantity } : cartItem);
+                localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(updated));
+                return updated;
+            });
         }
     };
 
     const removeFromCart = async (id: string) => {
         try {
             const result = await apiRequest<CartResponse>(`/api/cart/items/${encodeURIComponent(id)}`, { method: 'DELETE' });
-            setCartItems(result.items.map((item) => ({ ...item, image: getImageUrl(item.image) })));
+            const items = result.items.map((item) => ({ ...item, image: getImageUrl(item.image) }));
+            setCartItems(items);
+            localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(items));
             setSelectedIds((currentIds) => currentIds.filter((itemId) => itemId !== id));
-        } catch (error) {
-            showToast(error instanceof Error ? error.message : 'Không thể xóa sản phẩm khỏi giỏ.', 'danger');
+        } catch {
+            setCartItems((prev) => {
+                const updated = prev.filter((item) => item.id !== id);
+                localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(updated));
+                return updated;
+            });
+            setSelectedIds((currentIds) => currentIds.filter((itemId) => itemId !== id));
         }
     };
 
     const clearCart = async () => {
         try {
             await apiRequest<CartResponse>('/api/cart', { method: 'DELETE' });
-            setCartItems([]);
-            setSelectedIds([]);
-        } catch (error) {
-            showToast(error instanceof Error ? error.message : 'Không thể xóa giỏ hàng.', 'danger');
+        } catch {
+            // Ignore API error
         }
+        setCartItems([]);
+        setSelectedIds([]);
+        localStorage.removeItem(LEGACY_CART_KEY);
     };
 
     const toggleItem = (id: string) => {

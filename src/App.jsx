@@ -6,7 +6,7 @@ import { CartProvider, useCart } from './context/CartContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Hero from './components/layout/Hero';
-import BiketList from './components/home/BiketList';
+import BikeList from './components/home/BikeList';
 import Cart from './components/cart/Cart';
 import OrderHistory from './components/history/OrderHistory';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -72,7 +72,7 @@ function MainLayout() {
                              <Hero />
                          </div>
                      )}
-                     <BiketList
+                     <BikeList
                          selectedCategory={selectedCategory}
                          searchKeyword={searchKeyword}
                          onSelectTab={handleSelectTab}
