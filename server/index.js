@@ -160,6 +160,20 @@ function getCartItems(owner) {
     });
 }
 
+function getOrderStatus(order, now = Date.now()) {
+    if (order.status === 'Đã hủy') return 'Đã hủy';
+    if (order.demoStatus) return order.demoStatus;
+
+    const createdAt = Date.parse(order.createdAt);
+    if (!Number.isFinite(createdAt)) return 'Chờ xác nhận';
+
+    const elapsed = Math.max(0, now - createdAt);
+    if (elapsed >= 24 * 60 * 60 * 1000) return 'Giao hàng thành công';
+    if (elapsed >= 60 * 60 * 1000) return 'Đang vận chuyển';
+    if (elapsed >= 60 * 1000) return 'Đang chuẩn bị';
+    return 'Chờ xác nhận';
+}
+
 function sessionCookieHeader(token, clear = false) {
     const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
     if (clear) return `${sessionCookie}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`;
@@ -343,7 +357,7 @@ async function handleRequest(request, response) {
                 : items.reduce((sum, item) => sum + item.price * item.quantity, 0);
             const shipping = Number.isSafeInteger(legacyOrder.shipping) ? legacyOrder.shipping : 0;
             const discount = Number.isSafeInteger(legacyOrder.discount) ? legacyOrder.discount : 0;
-            const statusOptions = ['Đã tiếp nhận', 'Đang chuẩn bị', 'Đang vận chuyển', 'Giao hàng thành công'];
+            const statusOptions = ['Chờ xác nhận', 'Đang chuẩn bị', 'Đang vận chuyển', 'Giao hàng thành công', 'Đã hủy'];
             store.orders.push({
                 id: typeof legacyOrder.id === 'string' ? legacyOrder.id : `DH-CU-${randomBytes(5).toString('hex')}`,
                 createdAt: typeof legacyOrder.createdAt === 'string' ? legacyOrder.createdAt : new Date().toISOString(),
@@ -360,13 +374,61 @@ async function handleRequest(request, response) {
                 couponCode: typeof legacyOrder.couponCode === 'string' ? legacyOrder.couponCode : '',
                 deliveryMethod: legacyOrder.deliveryMethod === 'express' ? 'express' : 'standard',
                 paymentMethod: ['cod', 'qr', 'card'].includes(legacyOrder.paymentMethod) ? legacyOrder.paymentMethod : 'cod',
-                status: statusOptions.includes(legacyOrder.status) ? legacyOrder.status : 'Đã tiếp nhận',
+                status: statusOptions.includes(legacyOrder.status) ? legacyOrder.status : 'Chờ xác nhận',
             });
             imported += 1;
             handled += 1;
         }
         if (imported > 0) await saveStore();
         send(response, 200, { imported, handled });
+        return;
+    }
+
+    const orderActionMatch = path.match(/^\/api\/orders\/([^/]+)\/(cancel|advance)$/);
+    if (method === 'POST' && orderActionMatch) {
+        if (!user) {
+            send(response, 401, { error: 'Vui lòng đăng nhập để thao tác với đơn hàng.' });
+            return;
+        }
+        const orderId = decodeURIComponent(orderActionMatch[1]);
+        const order = store.orders.find((item) => item.id === orderId && item.userId === user.id);
+        if (!order) {
+            send(response, 404, { error: 'Không tìm thấy đơn hàng.' });
+            return;
+        }
+
+        const status = getOrderStatus(order);
+        const previousStore = JSON.stringify(store);
+        if (orderActionMatch[2] === 'cancel') {
+            if (status !== 'Chờ xác nhận') {
+                send(response, 409, { error: 'Chỉ có thể hủy đơn hàng đang chờ xác nhận.' });
+                return;
+            }
+            for (const item of order.items) {
+                const bike = store.bikes.find((candidate) => candidate.id === item.id);
+                if (bike) bike.stock += item.quantity;
+            }
+            order.status = 'Đã hủy';
+        } else {
+            const nextStatus = {
+                'Chờ xác nhận': 'Đang chuẩn bị',
+                'Đang chuẩn bị': 'Đang vận chuyển',
+                'Đang vận chuyển': 'Giao hàng thành công',
+            }[status];
+            if (!nextStatus) {
+                send(response, 409, { error: 'Đơn hàng đã ở trạng thái cuối, không thể đẩy nhanh thêm.' });
+                return;
+            }
+            order.demoStatus = nextStatus;
+        }
+
+        try {
+            await saveStore();
+        } catch (error) {
+            store = JSON.parse(previousStore);
+            throw error;
+        }
+        send(response, 200, { order });
         return;
     }
 
@@ -489,7 +551,7 @@ async function handleRequest(request, response) {
             couponCode,
             deliveryMethod: body.deliveryMethod,
             paymentMethod: body.paymentMethod,
-            status: 'Đã tiếp nhận',
+            status: 'Chờ xác nhận',
         };
 
         const previousStore = JSON.stringify(store);

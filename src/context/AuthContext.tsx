@@ -5,6 +5,7 @@ export interface User {
     id: string;
     name: string;
     email: string;
+    phone?: string;
     role: string;
     createdAt?: string;
 }
@@ -24,6 +25,8 @@ interface AuthContextValue {
     quickLogin: () => Promise<AuthResult>;
     register: (userData: { name: string; email: string; password: string }) => Promise<AuthResult>;
     logout: () => Promise<void>;
+    updateProfile: (data: { name: string; phone?: string }) => Promise<AuthResult>;
+    changePassword: (oldPassword: string, newPassword: string) => Promise<AuthResult>;
     isLoginModalOpen: boolean;
     authModalMode: AuthModalMode;
     openLoginModal: (mode?: AuthModalMode) => void;
@@ -178,6 +181,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const updateProfile = async (data: { name: string; phone?: string }): Promise<AuthResult> => {
+        try {
+            const result = await apiRequest<{ user: User; message?: string }>('/api/auth/profile', {
+                method: 'PUT',
+                body: JSON.stringify(data),
+            });
+            setUser(result.user);
+            return { success: true, message: result.message || 'Cập nhật hồ sơ thành công!' };
+        } catch (error) {
+            // Local fallback
+            if (user) {
+                const updated = { ...user, name: data.name, phone: data.phone || '' };
+                setUser(updated);
+                try {
+                    localStorage.setItem('current_user', JSON.stringify(updated));
+                } catch {}
+                return { success: true, message: 'Cập nhật hồ sơ thành công!' };
+            }
+            return { success: false, message: error instanceof Error ? error.message : 'Không thể cập nhật hồ sơ.' };
+        }
+    };
+
+    const changePassword = async (oldPassword: string, newPassword: string): Promise<AuthResult> => {
+        try {
+            const result = await apiRequest<{ message?: string }>('/api/auth/change-password', {
+                method: 'PUT',
+                body: JSON.stringify({ oldPassword, newPassword }),
+            });
+            return { success: true, message: result.message || 'Đổi mật khẩu thành công!' };
+        } catch (error) {
+            return { success: false, message: error instanceof Error ? error.message : 'Không thể đổi mật khẩu.' };
+        }
+    };
+
     const logout = async () => {
         try {
             await apiRequest('/api/auth/logout', { method: 'POST' });
@@ -202,6 +239,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             quickLogin,
             register,
             logout,
+            updateProfile,
+            changePassword,
             isLoginModalOpen,
             authModalMode,
             openLoginModal,

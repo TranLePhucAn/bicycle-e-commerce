@@ -1,5 +1,11 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, useEffect, type FormEvent } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import {
+    getDefaultAddress,
+    getUserAddresses,
+    formatFullAddress,
+    type AddressItem,
+} from '../../services/addressService';
 import {
     getCouponDiscount,
     getShippingFee,
@@ -26,11 +32,41 @@ const formatPrice = (amount: number) => `${amount.toLocaleString('vi-VN')} đ`;
 
 export default function Checkout({ items, onCancel, onOrderCreated }: CheckoutProps) {
     const { user } = useAuth();
-    const [recipient, setRecipient] = useState<RecipientDetails>({
-        ...emptyRecipient,
-        name: user?.name ?? '',
-        email: user?.email ?? '',
+    const savedAddresses = useMemo(() => user ? getUserAddresses(user.id) : [], [user]);
+    const defaultAddress = useMemo(() => user ? getDefaultAddress(user.id) : null, [user]);
+
+    const [recipient, setRecipient] = useState<RecipientDetails>(() => {
+        const addr = user ? getDefaultAddress(user.id) : null;
+        return {
+            name: addr?.fullName || user?.name || '',
+            phone: addr?.phone || user?.phone || '',
+            email: user?.email || '',
+            address: addr ? formatFullAddress(addr) : '',
+        };
     });
+
+    useEffect(() => {
+        if (user && defaultAddress) {
+            setRecipient((prev) => ({
+                name: prev.name || defaultAddress.fullName || user.name || '',
+                phone: prev.phone || defaultAddress.phone || user.phone || '',
+                email: prev.email || user.email || '',
+                address: prev.address || formatFullAddress(defaultAddress),
+            }));
+        }
+    }, [user, defaultAddress]);
+
+    const handleSelectSavedAddress = (addrId: string) => {
+        const found = savedAddresses.find((a) => a.id === addrId);
+        if (found) {
+            setRecipient((prev) => ({
+                ...prev,
+                name: found.fullName,
+                phone: found.phone,
+                address: formatFullAddress(found),
+            }));
+        }
+    };
     const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
     const [couponInput, setCouponInput] = useState('');
@@ -126,13 +162,33 @@ export default function Checkout({ items, onCancel, onOrderCreated }: CheckoutPr
                             <div className="card border-0 shadow-sm">
                                 <div className="card-header bg-dark text-white fw-semibold">Người nhận</div>
                                 <div className="card-body">
+                                    {savedAddresses.length > 0 && (
+                                        <div className="mb-3 p-2 bg-light rounded border">
+                                            <label className="form-label small fw-semibold text-primary mb-1">
+                                                <i className="fa-solid fa-address-book me-1"></i> Chọn từ sổ địa chỉ của bạn:
+                                            </label>
+                                            <select
+                                                className="form-select form-select-sm"
+                                                onChange={(e) => e.target.value && handleSelectSavedAddress(e.target.value)}
+                                                defaultValue=""
+                                            >
+                                                <option value="">-- Bấm để chọn địa chỉ nhận hàng --</option>
+                                                {savedAddresses.map((a) => (
+                                                    <option key={a.id} value={a.id}>
+                                                        {a.fullName} - {a.phone} ({formatFullAddress(a)}) {a.isDefault ? '★ Mặc định' : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+
                                     <label className="form-label" htmlFor="checkout-name">Họ tên</label>
                                     <input id="checkout-name" className="form-control mb-3" required maxLength={100}
                                         value={recipient.name} onChange={(e) => setRecipient({ ...recipient, name: e.target.value })} />
 
                                     <label className="form-label" htmlFor="checkout-phone">Số điện thoại</label>
                                     <input id="checkout-phone" className="form-control mb-3" type="tel" required
-                                        pattern="[0-9+(). -]{9,16}" title="Nhập số điện thoại hợp lệ."
+                                        pattern="[0-9+(). \-]{9,16}" title="Nhập số điện thoại hợp lệ."
                                         value={recipient.phone} onChange={(e) => setRecipient({ ...recipient, phone: e.target.value })} />
 
                                     <label className="form-label" htmlFor="checkout-email">Email</label>
