@@ -17,12 +17,13 @@ import Checkout from './components/checkout/Checkout';
 import OrderSuccess from './components/checkout/OrderSuccess';
 
 function MainLayout() {
-  const { cartItems, addToCart, clearCart } = useCart();
+  const { addToCart, refreshCart } = useCart();
   const [currentTab, setCurrentTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedBike, setSelectedBike] = useState(null);
   const [createdOrder, setCreatedOrder] = useState(null);
+  const [checkoutItems, setCheckoutItems] = useState([]);
 
   const handleSelectTab = (tabOrCategory) => {
     setSearchKeyword('');
@@ -85,16 +86,19 @@ function MainLayout() {
         {currentTab === 'cart' && (
           <Cart
             onContinueShopping={() => setCurrentTab('home')}
-            onCheckout={() => setCurrentTab('checkout')}
+            onCheckout={(items) => {
+              setCheckoutItems(items);
+              setCurrentTab('checkout');
+            }}
           />
         )}
 
         {currentTab === 'checkout' && (
           <Checkout
-            items={cartItems}
+            items={checkoutItems}
             onCancel={() => setCurrentTab('cart')}
             onOrderCreated={(order) => {
-              clearCart();
+              refreshCart().catch((error) => console.error('Không thể tải lại giỏ hàng:', error));
               setCreatedOrder(order);
               setCurrentTab('order-success');
             }}

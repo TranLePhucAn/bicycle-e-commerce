@@ -15,7 +15,7 @@ interface ReviewItem {
 export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
     bike: any;
     onSelectTab?: (category: string) => void;
-    onAddToCart?: (bike: any, quantity: number) => void;
+    onAddToCart?: (bike: any, quantity: number) => Promise<boolean> | boolean;
 }) {
     const { showToast } = useToast();
     const { user, openLoginModal } = useAuth() as any;
@@ -85,17 +85,47 @@ export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
         if (quantity > 1) setQuantity((prev) => prev - 1);
     };
 
+<<<<<<< HEAD
+    const getImageSrc = (imagePath: string | undefined) => {
+        if (!imagePath) return '/src/assets/images/bike01.png';
+        if (/^(https?:|data:|blob:|\/assets\/|\/src\/)/i.test(imagePath)) return imagePath;
+        const fileName = imagePath.split('/').pop();
+        return `/src/assets/images/${fileName}`;
+    };
+
+    const handleAddToCart = async () => {
+=======
     const handleAddToCart = () => {
+>>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
         const variantSuffix = [selectedSize, selectedColor].filter(Boolean).join('-');
         const itemToAdd = {
             ...bike,
             id: variantSuffix ? `${bike.id}-${variantSuffix}` : bike.id,
             originalBikeId: bike.id,
+<<<<<<< HEAD
+            image: getImageSrc(currentImage),
+=======
             image: `/src/assets/images/${currentImage}`,
+>>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
             selectedSize: selectedSize || undefined,
             selectedColor: selectedColor || undefined,
         };
 
+<<<<<<< HEAD
+        const added = await onAddToCart?.(itemToAdd, quantity);
+
+        if (added !== false) {
+            const optionText = [
+                selectedSize ? `Size ${selectedSize}` : '',
+                selectedColor || '',
+            ].filter(Boolean).join(' - ');
+
+            showToast(
+                `Đã thêm ${quantity} x "${bike.name}"${optionText ? ` (${optionText})` : ''} vào giỏ hàng!`,
+                'success'
+            );
+        }
+=======
         onAddToCart?.(itemToAdd, quantity);
 
         const optionText = [
@@ -107,6 +137,7 @@ export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
             `Đã thêm ${quantity} x "${bike.name}"${optionText ? ` (${optionText})` : ''} vào giỏ hàng!`,
             'success'
         );
+>>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
     };
 
     const handleSubmitReview = (e: React.FormEvent) => {
@@ -182,10 +213,18 @@ export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
                     <div className="col-12 col-md-5 text-center">
                         <div className="p-4 bg-light rounded-4 d-flex align-items-center justify-content-center mb-3" style={{ minHeight: '320px' }}>
                             <img
+<<<<<<< HEAD
+                                src={getImageSrc(currentImage)}
+=======
                                 src={`/src/assets/images/${currentImage}`}
+>>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
                                 alt={bike.name}
                                 className="img-fluid object-fit-contain"
                                 style={{ maxHeight: '280px' }}
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                        'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=600&q=80';
+                                }}
                             />
                         </div>
 
@@ -202,7 +241,11 @@ export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
                                         style={{ width: '64px', height: '64px' }}
                                     >
                                         <img
+<<<<<<< HEAD
+                                            src={getImageSrc(imgName)}
+=======
                                             src={`/src/assets/images/${imgName}`}
+>>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
                                             alt={`${bike.name} ${idx + 1}`}
                                             className="img-fluid h-100 w-100 object-fit-contain"
                                         />
