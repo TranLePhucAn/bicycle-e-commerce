@@ -1,16 +1,27 @@
-# React + Vite
+# BikeShop
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ứng dụng React dùng Vite, có API Node.js chạy cùng trong môi trường phát triển.
 
-Currently, two official plugins are available:
+## Chạy dự án
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Trên Windows PowerShell, có thể chạy `npm.cmd run dev`. Lệnh này khởi động API ở cổng `3001` và giao diện Vite ở địa chỉ được in trong cửa sổ Run/Terminal. Nhấn `Ctrl+C` để dừng cả hai.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Dữ liệu
 
-## Expanding the ESLint configuration
+API lưu xe, tài khoản, giỏ hàng, đơn hàng và tồn kho trong `server/data/store.json`. Tệp được tạo tự động khi chạy API lần đầu và không đưa vào Git. Danh mục xe ban đầu được nạp từ `src/data/bikes.json`.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Các route API chính:
+
+- `GET /api/bikes`
+- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
+- `GET /api/cart`, `POST /api/cart/items`, `PUT /api/cart/items/:id`, `DELETE /api/cart/items/:id`, `DELETE /api/cart`
+- `POST /api/orders`, `GET /api/orders/me`
+
+Tài khoản demo khi API khởi tạo lần đầu: `an.tran@example.com` / `password123` hoặc `demo@bikeshop.vn` / `password123`.
+
+`npm run api` chạy riêng API; `npm run dev:web` chạy riêng Vite khi API đã được khởi động.

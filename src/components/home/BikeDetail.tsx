@@ -4,7 +4,7 @@ import { useToast } from '../../context/ToastContext';
 export default function BikeDetail({bike, onSelectTab, onAddToCart}: {
     bike: any;
     onSelectTab?: (category: string) => void;
-    onAddToCart?: (bike: any, quantity: number) => void;
+    onAddToCart?: (bike: any, quantity: number) => Promise<boolean> | boolean;
 }) {
     const { showToast } = useToast();
     const [quantity, setQuantity] = useState<number>(1);
@@ -20,12 +20,19 @@ export default function BikeDetail({bike, onSelectTab, onAddToCart}: {
         if (quantity > 1) setQuantity((prev) => prev - 1);
     };
 
-    const handleAddToCart = () => {
-        onAddToCart?.(bike, quantity);
-        showToast(`Đã thêm ${quantity} x "${bike.name}" vào giỏ hàng!`, 'success');
+    const handleAddToCart = async () => {
+        const added = await onAddToCart?.(bike, quantity);
+        if (added !== false) showToast(`Đã thêm ${quantity} x "${bike.name}" vào giỏ hàng!`, 'success');
     };
 
     const categoryText = Array.isArray(bike.category) ? bike.category.join(', ') : (bike.category || 'Xe đạp');
+
+    const getImageSrc = (imagePath: string | undefined) => {
+        if (!imagePath) return '/src/assets/images/bike01.png';
+        if (/^(https?:|data:|blob:|\/assets\/|\/src\/)/i.test(imagePath)) return imagePath;
+        const fileName = imagePath.split('/').pop();
+        return `/src/assets/images/${fileName}`;
+    };
 
     return (
         <section className="container py-3">
@@ -66,10 +73,14 @@ export default function BikeDetail({bike, onSelectTab, onAddToCart}: {
                     <div className="col-12 col-md-5 text-center">
                         <div className="p-4 bg-light rounded-4 d-flex align-items-center justify-content-center" style={{ minHeight: '320px' }}>
                             <img
-                                src={`/src/assets/images/${bike.image}`}
+                                src={getImageSrc(bike.image)}
                                 alt={bike.name}
                                 className="img-fluid object-fit-contain"
                                 style={{ maxHeight: '280px' }}
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                        'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=600&q=80';
+                                }}
                             />
                         </div>
                     </div>

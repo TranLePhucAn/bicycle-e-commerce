@@ -83,19 +83,18 @@ export default function Checkout({ items, onCancel, onOrderCreated }: CheckoutPr
         setConfirming(true);
     };
 
-    const confirmOrder = () => {
+    const confirmOrder = async () => {
         if (submittingRef.current) return;
         submittingRef.current = true;
         setSubmitting(true);
 
         try {
-            const order = createOrder({
+            const order = await createOrder({
                 items,
                 recipient,
                 couponCode: appliedCoupon,
                 deliveryMethod,
                 paymentMethod,
-                user: user ? { id: user.id, email: user.email } : null,
             });
             onOrderCreated(order);
         } catch (caught) {

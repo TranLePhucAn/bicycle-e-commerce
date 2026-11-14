@@ -14,12 +14,13 @@ import NotFound from './components/common/NotFound';
 import LoginModal from './components/auth/LoginModal';
 import Checkout from './components/checkout/Checkout';
 import OrderSuccess from './components/checkout/OrderSuccess';
-import type { OrderRecord } from './services/checkoutService';
+import type { CheckoutItem, OrderRecord } from './services/checkoutService';
 
 function MainLayout() {
   const [currentTab, setCurrentTab] = useState('home');
+  const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
   const [createdOrder, setCreatedOrder] = useState<OrderRecord | null>(null);
-  const { cartItems, clearCart } = useCart();
+  const { refreshCart } = useCart();
 
   return (
     <div className="d-flex flex-column min-vh-100 bg-light">
@@ -38,16 +39,19 @@ function MainLayout() {
         <div style={{ display: currentTab === 'cart' ? 'block' : 'none' }}>
           <Cart
             onContinueShopping={() => setCurrentTab('home')}
-            onCheckout={() => setCurrentTab('checkout')}
+            onCheckout={(items) => {
+              setCheckoutItems(items);
+              setCurrentTab('checkout');
+            }}
           />
         </div>
 
         {currentTab === 'checkout' && (
           <Checkout
-            items={cartItems}
+            items={checkoutItems}
             onCancel={() => setCurrentTab('cart')}
             onOrderCreated={(order) => {
-              clearCart();
+              refreshCart().catch((error) => console.error('Không thể tải lại giỏ hàng:', error));
               setCreatedOrder(order);
               setCurrentTab('order-success');
             }}

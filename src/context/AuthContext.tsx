@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { apiRequest } from '../services/apiClient';
 
 export interface User {
     id: string;
@@ -8,10 +9,6 @@ export interface User {
     createdAt?: string;
 }
 
-export interface StoredUser extends User {
-    password: string;
-}
-
 export type AuthModalMode = 'login' | 'register';
 
 export interface AuthResult {
@@ -19,14 +16,14 @@ export interface AuthResult {
     message: string;
 }
 
-interface AuthContextType {
+interface AuthContextValue {
     user: User | null;
     isLoggedIn: boolean;
-    login: (email: string, password: string) => AuthResult;
-    quickLogin: () => AuthResult;
-    register: (userData: { name: string; email: string; password: string }) => AuthResult;
-    logout: () => void;
-    isEmailTaken: (email: string) => boolean;
+    isAuthLoading: boolean;
+    login: (email: string, password: string) => Promise<AuthResult>;
+    quickLogin: () => Promise<AuthResult>;
+    register: (userData: { name: string; email: string; password: string }) => Promise<AuthResult>;
+    logout: () => Promise<void>;
     isLoginModalOpen: boolean;
     authModalMode: AuthModalMode;
     openLoginModal: (mode?: AuthModalMode) => void;
@@ -34,199 +31,159 @@ interface AuthContextType {
     setAuthModalMode: (mode: AuthModalMode) => void;
 }
 
-const STORAGE_KEY_CURRENT_USER = 'current_user';
-const STORAGE_KEY_USERS = 'bikeshop_users';
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-// Dữ liệu người dùng mẫu ban đầu nếu hệ thống chưa có dữ liệu trong localStorage
-const DEFAULT_USERS: StoredUser[] = [
-    {
-        id: 'usr-default-01',
-        name: 'Trần Lê Phúc An',
-        email: 'an.tran@example.com',
-        password: 'password123',
-        role: 'Thành viên VIP',
-        createdAt: new Date().toISOString(),
-    },
-    {
-        id: 'usr-default-02',
-        name: 'Khách hàng Demo',
-        email: 'demo@bikeshop.vn',
-        password: 'password123',
-        role: 'Khách hàng thân thiết',
-        createdAt: new Date().toISOString(),
-    },
-];
+async function importLegacyOrders() {
+    const savedOrders = localStorage.getItem('my_orders');
+    if (!savedOrders) return;
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-function getStoredUsers(): StoredUser[] {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY_USERS);
-        if (!raw) {
-            localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(DEFAULT_USERS));
-            return DEFAULT_USERS;
+        const orders = JSON.parse(savedOrders);
+        if (!Array.isArray(orders) || orders.length === 0) return;
+
+        const result = await apiRequest<{ handled: number }>('/api/orders/import-legacy', {
+            method: 'POST',
+            body: JSON.stringify({ orders }),
+        });
+        if (result.handled === orders.length) {
+            localStorage.removeItem('my_orders');
+            localStorage.removeItem('bike_stock');
         }
-        return JSON.parse(raw) as StoredUser[];
-    } catch {
-        return DEFAULT_USERS;
+    } catch (error) {
+        console.warn('Không thể chuyển lịch sử đơn hàng cũ:', error);
     }
 }
 
-function saveStoredUsers(users: StoredUser[]) {
-    try {
-        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-    } catch (e) {
-        console.error('Không thể lưu danh sách users vào localStorage:', e);
-    }
-}
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-    // 1. Khởi tạo current_user từ localStorage
-    const [user, setUser] = useState<User | null>(() => {
-        try {
-            const rawUser = localStorage.getItem(STORAGE_KEY_CURRENT_USER);
-            if (rawUser) {
-                return JSON.parse(rawUser) as User;
-            }
-        } catch (e) {
-            console.error('Lỗi khi đọc current_user từ localStorage:', e);
-        }
-        return null;
-    });
-
+export function AuthProvider({ children }: { children: ReactNode }) {
+    const [user, setUser] = useState<User | null>(null);
+    const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
+    const hasLoadedSession = useRef(false);
 
-    // Đảm bảo có sẵn danh sách users ban đầu
-    useEffect(() => {
-        getStoredUsers();
+    const loadCurrentUser = useCallback(async () => {
+        try {
+            const result = await apiRequest<{ user: User | null }>('/api/auth/me');
+            if (result.user) {
+                setUser(result.user);
+                importLegacyOrders().catch((error) => console.error('Không thể chuyển lịch sử đơn hàng cũ:', error));
+                return;
+            }
+
+            const savedUsers = localStorage.getItem('bikeshop_users');
+            if (savedUsers) {
+                try {
+                    const legacyUsers = JSON.parse(savedUsers);
+                    if (Array.isArray(legacyUsers) && legacyUsers.length > 0) {
+                        await apiRequest('/api/auth/import-users', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                users: legacyUsers.map((legacyUser) => ({
+                                    name: legacyUser.name,
+                                    email: legacyUser.email,
+                                    password: legacyUser.password,
+                                    createdAt: legacyUser.createdAt,
+                                })),
+                            }),
+                        }).catch(() => {});
+
+                        const savedUser = localStorage.getItem('current_user');
+                        if (savedUser) {
+                            try {
+                                const legacySession = JSON.parse(savedUser);
+                                const legacyAccount = legacyUsers.find((account) =>
+                                    account.email?.toLowerCase() === legacySession.email?.toLowerCase()
+                                );
+                                if (legacyAccount?.password) {
+                                    const loginResult = await apiRequest<{ user: User }>('/api/auth/login', {
+                                        method: 'POST',
+                                        body: JSON.stringify({ email: legacyAccount.email, password: legacyAccount.password }),
+                                    });
+                                    setUser(loginResult.user);
+                                }
+                            } catch {
+                                // Bỏ qua nếu dữ liệu current_user cũ không hợp lệ
+                            }
+                        }
+
+                        localStorage.removeItem('bikeshop_users');
+                        localStorage.removeItem('current_user');
+                        importLegacyOrders().catch((err) => console.error('Không thể chuyển lịch sử đơn hàng cũ:', err));
+                    }
+                } catch {
+                    localStorage.removeItem('bikeshop_users');
+                    localStorage.removeItem('current_user');
+                }
+            }
+        } catch (error) {
+            console.error('Không thể kiểm tra phiên đăng nhập:', error);
+        } finally {
+            setIsAuthLoading(false);
+        }
     }, []);
 
-    // 2. Chức năng kiểm tra email đã tồn tại hay chưa
-    const isEmailTaken = (email: string): boolean => {
-        if (!email) return false;
-        const normalizedEmail = email.trim().toLowerCase();
-        const users = getStoredUsers();
-        return users.some((u) => u.email.toLowerCase() === normalizedEmail);
-    };
+    useEffect(() => {
+        if (hasLoadedSession.current) return;
+        hasLoadedSession.current = true;
+        loadCurrentUser();
+    }, [loadCurrentUser]);
 
-    // 3. Chức năng Đăng Ký
-    const register = ({
-        name,
-        email,
-        password,
-    }: {
-        name: string;
-        email: string;
-        password: string;
-    }): AuthResult => {
-        const normalizedEmail = email.trim().toLowerCase();
-        const trimmedName = name.trim();
-
-        // Kiểm tra chặn email trùng
-        if (isEmailTaken(normalizedEmail)) {
+    const login = async (email: string, password: string): Promise<AuthResult> => {
+        try {
+            const result = await apiRequest<{ user: User }>('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password }),
+            });
+            setUser(result.user);
+            setIsLoginModalOpen(false);
+            importLegacyOrders().catch((error) => console.error('Không thể chuyển lịch sử đơn hàng cũ:', error));
+            return { success: true, message: `Chào mừng trở lại, ${result.user.name}!` };
+        } catch (error) {
             return {
                 success: false,
-                message: 'Email này đã được đăng ký trong hệ thống! Vui lòng sử dụng email khác.',
+                message: error instanceof Error ? error.message : 'Không thể đăng nhập.',
             };
         }
-
-        const newUser: StoredUser = {
-            id: `usr-${Date.now()}`,
-            name: trimmedName,
-            email: normalizedEmail,
-            password: password,
-            role: 'Thành viên mới',
-            createdAt: new Date().toISOString(),
-        };
-
-        // Lưu vào danh sách users
-        const users = getStoredUsers();
-        users.push(newUser);
-        saveStoredUsers(users);
-
-        // Tạo thông tin session không chứa password
-        const currentUserData: User = {
-            id: newUser.id,
-            name: newUser.name,
-            email: newUser.email,
-            role: newUser.role,
-            createdAt: newUser.createdAt,
-        };
-
-        // Lưu current_user vào localStorage và State
-        try {
-            localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(currentUserData));
-        } catch (e) {
-            console.error('Lỗi khi lưu current_user vào localStorage:', e);
-        }
-
-        setUser(currentUserData);
-        setIsLoginModalOpen(false);
-
-        return {
-            success: true,
-            message: `Chúc mừng ${trimmedName}! Bạn đã đăng ký tài khoản thành công.`,
-        };
     };
 
-    // 4. Chức năng Đăng Nhập
-    const login = (email: string, password: string): AuthResult => {
-        const normalizedEmail = email.trim().toLowerCase();
-        const users = getStoredUsers();
-
-        const foundUser = users.find((u) => u.email.toLowerCase() === normalizedEmail);
-        if (!foundUser) {
+    const register = async (userData: { name: string; email: string; password: string }): Promise<AuthResult> => {
+        try {
+            const result = await apiRequest<{ user: User }>('/api/auth/register', {
+                method: 'POST',
+                body: JSON.stringify(userData),
+            });
+            setUser(result.user);
+            setIsLoginModalOpen(false);
+            importLegacyOrders().catch((error) => console.error('Không thể chuyển lịch sử đơn hàng cũ:', error));
+            return { success: true, message: `Chúc mừng ${result.user.name}! Bạn đã đăng ký thành công.` };
+        } catch (error) {
             return {
                 success: false,
-                message: 'Email không tồn tại trong hệ thống! Vui lòng kiểm tra lại hoặc Đăng ký.',
+                message: error instanceof Error ? error.message : 'Không thể đăng ký tài khoản.',
             };
         }
+    };
 
-        if (foundUser.password !== password) {
+    const quickLogin = async (): Promise<AuthResult> => {
+        try {
+            const result = await apiRequest<{ user: User }>('/api/auth/demo', { method: 'POST' });
+            setUser(result.user);
+            setIsLoginModalOpen(false);
+            return { success: true, message: `Chào mừng trở lại, ${result.user.name}!` };
+        } catch (error) {
             return {
                 success: false,
-                message: 'Mật khẩu không chính xác! Vui lòng thử lại.',
+                message: error instanceof Error ? error.message : 'Không thể đăng nhập tài khoản demo.',
             };
         }
-
-        const currentUserData: User = {
-            id: foundUser.id,
-            name: foundUser.name,
-            email: foundUser.email,
-            role: foundUser.role,
-            createdAt: foundUser.createdAt,
-        };
-
-        // Lưu current_user vào localStorage và State
-        try {
-            localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(currentUserData));
-        } catch (e) {
-            console.error('Lỗi khi lưu current_user vào localStorage:', e);
-        }
-
-        setUser(currentUserData);
-        setIsLoginModalOpen(false);
-
-        return {
-            success: true,
-            message: `Chào mừng trở lại, ${foundUser.name}!`,
-        };
     };
 
-    // Đăng nhập nhanh tài khoản mẫu
-    const quickLogin = (): AuthResult => {
-        return login('an.tran@example.com', 'password123');
-    };
-
-    // 5. Chức năng Đăng Xuất
-    const logout = () => {
+    const logout = async () => {
         try {
-            localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
-        } catch (e) {
-            console.error('Lỗi khi xóa current_user khỏi localStorage:', e);
+            await apiRequest('/api/auth/logout', { method: 'POST' });
+        } finally {
+            setUser(null);
         }
-        setUser(null);
     };
 
     const openLoginModal = (mode?: AuthModalMode) => {
@@ -234,27 +191,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoginModalOpen(true);
     };
 
-    const closeLoginModal = () => {
-        setIsLoginModalOpen(false);
-    };
+    const closeLoginModal = () => setIsLoginModalOpen(false);
 
     return (
-        <AuthContext.Provider
-            value={{
-                user,
-                isLoggedIn: !!user,
-                login,
-                quickLogin,
-                register,
-                logout,
-                isEmailTaken,
-                isLoginModalOpen,
-                authModalMode,
-                openLoginModal,
-                closeLoginModal,
-                setAuthModalMode,
-            }}
-        >
+        <AuthContext.Provider value={{
+            user,
+            isLoggedIn: !!user,
+            isAuthLoading,
+            login,
+            quickLogin,
+            register,
+            logout,
+            isLoginModalOpen,
+            authModalMode,
+            openLoginModal,
+            closeLoginModal,
+            setAuthModalMode,
+        }}>
             {children}
         </AuthContext.Provider>
     );
@@ -262,8 +215,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
     const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider');
-    }
+    if (!context) throw new Error('useAuth phải được dùng bên trong AuthProvider');
     return context;
 }

@@ -1,21 +1,27 @@
 import { useCart } from '../../context/CartContext';
+import type { CheckoutItem } from '../../services/checkoutService';
 
 interface CartProps {
     onContinueShopping: () => void;
-    onCheckout: () => void;
+    onCheckout: (items: CheckoutItem[]) => void;
 }
 
 export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
     const {
         cartItems,
+        selectedIds,
         totalCount,
-        subtotal,
-        shippingFee,
-        totalAmount,
         updateQuantity,
         removeFromCart,
         clearCart,
+        toggleItem,
+        toggleAll,
     } = useCart();
+    const selectedItems = cartItems.filter((item) => selectedIds.includes(item.id));
+    const selectedCount = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+    const subtotal = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const shippingFee = selectedItems.length > 0 ? 150000 : 0;
+    const totalAmount = subtotal + shippingFee;
 
     return (
         <section className="container py-5">
@@ -25,7 +31,7 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                         <i className="fa-solid fa-cart-shopping me-2 text-primary"></i>
                         Giỏ Hàng Của Bạn
                     </h3>
-                    <small className="text-muted">{totalCount} sản phẩm trong giỏ</small>
+                    <small className="text-muted">Đã chọn {selectedCount} / {totalCount} sản phẩm</small>
                 </div>
                 <div className="d-flex flex-wrap gap-2">
                     {cartItems.length > 0 && (
@@ -58,12 +64,21 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                     <div className="col-12 col-lg-8">
                         <div className="card shadow-sm border-0 rounded-3 overflow-hidden">
                             <div className="card-header bg-dark text-white fw-semibold py-3">
-                                Sản phẩm đã chọn ({cartItems.length})
+                                Sản phẩm trong giỏ ({cartItems.length})
                             </div>
                             <div className="table-responsive">
                                 <table className="table align-middle mb-0">
                                     <thead className="table-light">
                                     <tr>
+                                        <th className="text-center" style={{ width: '42px' }}>
+                                            <input
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                aria-label="Chọn tất cả sản phẩm"
+                                                checked={cartItems.length > 0 && selectedItems.length === cartItems.length}
+                                                onChange={toggleAll}
+                                            />
+                                        </th>
                                         <th style={{ width: '45%' }}>Sản phẩm</th>
                                         <th>Đơn giá</th>
                                         <th style={{ width: '130px' }} className="text-center">Số lượng</th>
@@ -74,6 +89,15 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                     <tbody>
                                     {cartItems.map(item => (
                                         <tr key={item.id}>
+                                            <td className="text-center">
+                                                <input
+                                                    className="form-check-input"
+                                                    type="checkbox"
+                                                    aria-label={`Chọn ${item.name}`}
+                                                    checked={selectedIds.includes(item.id)}
+                                                    onChange={() => toggleItem(item.id)}
+                                                />
+                                            </td>
                                             <td>
                                                 <div className="d-flex align-items-center gap-3">
                                                     <img
@@ -158,7 +182,8 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                 <button
                                     type="button"
                                     className="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm mb-2"
-                                    onClick={onCheckout}
+                                    onClick={() => onCheckout(selectedItems)}
+                                    disabled={selectedItems.length === 0}
                                 >
                                     Tiến Hành Thanh Toán
                                 </button>

@@ -28,11 +28,15 @@ export default function Navbar({
         }
     };
 
-    const handleLogout = () => {
-        logout();
-        showToast('Đã đăng xuất thành công.', 'info');
-        if (currentTab === 'history' && onSelectTab) {
-            onSelectTab('home');
+    const handleLogout = async () => {
+        try {
+            await logout();
+            showToast('Đã đăng xuất thành công.', 'info');
+            if (currentTab === 'history' && onSelectTab) {
+                onSelectTab('home');
+            }
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Không thể đăng xuất.', 'danger');
         }
     };
 
