@@ -16,7 +16,10 @@ export default function Navbar({
                                    selectedCategory = 'Tất cả',
                                    onSelectTab,
                                    onSearch,
+<<<<<<< HEAD
                                    onOpenCartDrawer,
+=======
+>>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
                                }: NavbarProps) {
     const { user, isLoggedIn, logout, openLoginModal } = useAuth();
     const { showToast } = useToast();
@@ -131,7 +134,10 @@ export default function Navbar({
                                 className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap ${
                                     currentTab === 'cart' ? 'btn-primary text-white' : 'btn-outline-secondary'
                                 }`}
+<<<<<<< HEAD
                                 title="Mở giỏ hàng"
+=======
+>>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
                             >
                                 <i className="fa-solid fa-bag-shopping"></i>
                                 <span className="fw-semibold small">Giỏ hàng</span>

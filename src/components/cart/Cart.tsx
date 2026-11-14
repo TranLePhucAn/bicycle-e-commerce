@@ -153,6 +153,7 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                     </tr>
                                     </thead>
                                     <tbody>
+<<<<<<< HEAD
                                     {cartItems.map((item: any) => {
                                         const stock = getStock(item.originalBikeId, item.id);
                                         const isOver = item.quantity > stock;
@@ -237,6 +238,51 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                                     {(item.price * item.quantity).toLocaleString('vi-VN')} đ
                                                 </td>
                                                 <td className="text-end pe-3">
+=======
+                                    {cartItems.map((item: any) => (
+                                        <tr key={item.id}>
+                                            <td>
+                                                <div className="d-flex align-items-center gap-3">
+                                                    <img
+                                                        src={item.image?.startsWith('/') || item.image?.startsWith('http')
+                                                            ? item.image
+                                                            : `/src/assets/images/${item.image}`}
+                                                        alt={item.name}
+                                                        className="rounded"
+                                                        style={{ width: '60px', height: '60px', objectFit: 'cover' }}
+                                                    />
+                                                    <div>
+                                                        <div className="fw-bold text-dark">{item.name}</div>
+                                                        {(item.selectedSize || item.selectedColor) && (
+                                                            <small className="text-muted d-block mt-1">
+                                                                {[
+                                                                    item.selectedSize,
+                                                                    item.selectedColor,
+                                                                ]
+                                                                    .filter(Boolean)
+                                                                    .join(', ')}
+                                                            </small>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="fw-semibold">
+                                                {item.price.toLocaleString('vi-VN')} đ
+                                            </td>
+                                            <td>
+                                                <div className="input-group input-group-sm justify-content-center">
+                                                    <button
+                                                        className="btn btn-outline-secondary"
+                                                        type="button"
+                                                        disabled={item.quantity <= 1}
+                                                        onClick={() => updateQuantity(item.id, -1)}
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <span className="input-group-text px-3 bg-white fw-bold">
+                                                        {item.quantity}
+                                                    </span>
+>>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
                                                     <button
                                                         className="btn btn-sm btn-outline-danger border-0"
                                                         title="Xóa sản phẩm"
