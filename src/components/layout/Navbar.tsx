@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
 
 interface NavbarProps {
     currentTab?: string;
@@ -11,33 +12,43 @@ interface NavbarProps {
     onOpenCartDrawer?: () => void;
 }
 
-export default function Navbar({
-                                   currentTab = 'home',
-                                   selectedCategory = 'Tất cả',
-                                   onSelectTab,
-                                   onSearch,
-<<<<<<< HEAD
-                                   onOpenCartDrawer,
-=======
->>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
-                               }: NavbarProps) {
+export default function Navbar({currentTab = 'home', selectedCategory = 'Tất cả', onSelectTab, onSearch, onOpenCartDrawer,}: NavbarProps) {
     const { user, isLoggedIn, logout, openLoginModal } = useAuth();
     const { showToast } = useToast();
     const { totalCount } = useCart();
+    const { wishlistCount } = useWishlist();
     const [searchTerm, setSearchTerm] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        setIsDropdownOpen(false);
+    }, [isLoggedIn]);
 
     const handleTabClick = (e: React.MouseEvent, tab: string) => {
         e.preventDefault();
+        setIsDropdownOpen(false);
         if (onSelectTab) {
             onSelectTab(tab);
         }
     };
 
     const handleLogout = async () => {
+        setIsDropdownOpen(false);
         try {
             await logout();
             showToast('Đã đăng xuất thành công.', 'info');
-            if (currentTab === 'history' && onSelectTab) {
+            if ((currentTab === 'history' || currentTab === 'wishlist' || currentTab === 'account') && onSelectTab) {
                 onSelectTab('home');
             }
         } catch (error) {
@@ -65,10 +76,10 @@ export default function Navbar({
 
     return (
         <>
-            <header className="shadow-sm bg-white border-bottom">
+            <header className="shadow-sm bg-white border-bottom position-relative" style={{ zIndex: 1050 }}>
                 <div className="container py-3">
-                    <div className="row align-items-center gy-3">
-                        <div className="col-12 col-md-3 text-center text-md-start">
+                    <div className="d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between gap-3">
+                        <div className="text-center text-md-start flex-shrink-0">
                             <a
                                 href="#"
                                 onClick={(e) => handleTabClick(e, 'home')}
@@ -76,7 +87,7 @@ export default function Navbar({
                             >
                                 <div className="d-flex align-items-center">
                                     <span
-                                        className="text-white rounded-circle d-flex align-items-center justify-content-center fw-bold fs-3 me-2"
+                                        className="text-white rounded-circle d-flex align-items-center justify-content-center fw-bold fs-3 me-2 flex-shrink-0"
                                         style={{ width: '45px', height: '45px', backgroundColor: '#1e293b' }}
                                     >
                                         🚲
@@ -85,7 +96,7 @@ export default function Navbar({
                                         <div className="fw-bold fs-4 tracking-wider" style={{ color: '#1e293b' }}>
                                             BIKESHOP
                                         </div>
-                                        <small className="text-muted" style={{ fontSize: '10px' }}>
+                                        <small className="text-muted text-nowrap" style={{ fontSize: '10px' }}>
                                             PHÂN PHỐI XE ĐẠP CHÍNH HÃNG
                                         </small>
                                     </div>
@@ -93,7 +104,7 @@ export default function Navbar({
                             </a>
                         </div>
 
-                        <div className="col-12 col-md-3">
+                        <div className="flex-grow-1" style={{ minWidth: '220px' }}>
                             <form className="d-flex" onSubmit={handleSearchSubmit}>
                                 <div className="input-group rounded-3 overflow-hidden" style={{ border: '1px solid #1e293b' }}>
                                     <input
@@ -111,11 +122,11 @@ export default function Navbar({
                             </form>
                         </div>
 
-                        <div className="col-12 col-md-6 d-flex justify-content-center justify-content-md-end align-items-center gap-2 flex-wrap">
+                        <div className="d-flex justify-content-center justify-content-md-end align-items-center gap-2 flex-wrap flex-md-nowrap flex-shrink-0">
                             <button
                                 type="button"
                                 onClick={(e) => handleTabClick(e, 'history')}
-                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap ${
+                                className={`btn rounded-3 d-flex align-items-center gap-2 px-2 px-xxl-3 py-2 text-nowrap ${
                                     currentTab === 'history' ? 'btn-primary text-white' : 'btn-outline-secondary'
                                 }`}
                                 title="Xem lịch sử đơn hàng"
@@ -126,18 +137,30 @@ export default function Navbar({
 
                             <button
                                 type="button"
+                                onClick={(e) => handleTabClick(e, 'wishlist')}
+                                className={`btn rounded-3 d-flex align-items-center gap-2 px-2 px-xxl-3 py-2 text-nowrap ${
+                                    currentTab === 'wishlist' ? 'btn-primary text-white' : 'btn-outline-secondary'
+                                }`}
+                                title="Xem danh sách yêu thích"
+                            >
+                                <i className={`${currentTab === 'wishlist' ? 'fa-solid' : 'fa-regular'} fa-heart`}></i>
+                                <span className="fw-semibold small">Yêu thích</span>
+                                <span className="badge fw-bold px-2 py-1 rounded-pill bg-danger text-white">
+                                    {wishlistCount}
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
                                 onClick={(e) => {
                                     e.preventDefault();
                                     if (onOpenCartDrawer) onOpenCartDrawer();
                                     else handleTabClick(e, 'cart');
                                 }}
-                                className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap ${
+                                className={`btn rounded-3 d-flex align-items-center gap-2 px-2 px-xxl-3 py-2 text-nowrap ${
                                     currentTab === 'cart' ? 'btn-primary text-white' : 'btn-outline-secondary'
                                 }`}
-<<<<<<< HEAD
                                 title="Mở giỏ hàng"
-=======
->>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
                             >
                                 <i className="fa-solid fa-bag-shopping"></i>
                                 <span className="fw-semibold small">Giỏ hàng</span>
@@ -149,12 +172,12 @@ export default function Navbar({
                             </button>
 
                             {isLoggedIn ? (
-                                <div className="dropdown">
+                                <div className="dropdown position-relative" ref={dropdownRef}>
                                     <button
                                         type="button"
                                         className="btn btn-light rounded-3 d-flex align-items-center gap-2 p-1 pe-3 border dropdown-toggle shadow-none"
-                                        data-bs-toggle="dropdown"
-                                        aria-expanded="false"
+                                        aria-expanded={isDropdownOpen}
+                                        onClick={() => setIsDropdownOpen((prev) => !prev)}
                                     >
                                         <span
                                             className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
@@ -171,15 +194,28 @@ export default function Navbar({
                                             </span>
                                         </div>
                                     </button>
-                                    <ul className="dropdown-menu dropdown-menu-end shadow border-0 mt-2 py-2">
+                                    <ul
+                                        className={`dropdown-menu dropdown-menu-end shadow border-0 mt-2 py-2 ${isDropdownOpen ? 'show' : ''}`}
+                                        style={{ zIndex: 1055, right: 0, left: 'auto' }}
+                                    >
                                         <li>
                                             <a
                                                 className={`dropdown-item py-2 d-flex align-items-center gap-2 ${currentTab === 'account' ? 'active bg-primary text-white' : ''}`}
                                                 href="#"
                                                 onClick={(e) => handleTabClick(e, 'account')}
                                             >
-                                                <i className="fa-solid fa-user text-primary"></i>
+                                                <i className={`fa-solid fa-user ${currentTab === 'account' ? 'text-white' : 'text-primary'}`}></i>
                                                 <span>Hồ sơ & Sổ địa chỉ</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a
+                                                className={`dropdown-item py-2 d-flex align-items-center gap-2 ${currentTab === 'wishlist' ? 'active bg-primary text-white' : ''}`}
+                                                href="#"
+                                                onClick={(e) => handleTabClick(e, 'wishlist')}
+                                            >
+                                                <i className={`fa-solid fa-heart ${currentTab === 'wishlist' ? 'text-white' : 'text-danger'}`}></i>
+                                                <span>Sản phẩm yêu thích</span>
                                             </a>
                                         </li>
                                         <li>
@@ -188,7 +224,7 @@ export default function Navbar({
                                                 href="#"
                                                 onClick={(e) => handleTabClick(e, 'history')}
                                             >
-                                                <i className="fa-solid fa-clock-rotate-left text-secondary"></i>
+                                                <i className={`fa-solid fa-clock-rotate-left ${currentTab === 'history' ? 'text-white' : 'text-secondary'}`}></i>
                                                 <span>Lịch sử đơn hàng</span>
                                             </a>
                                         </li>
@@ -206,10 +242,10 @@ export default function Navbar({
                                     </ul>
                                 </div>
                             ) : (
-                                <div className="d-flex align-items-center gap-2">
+                                <div className="d-flex align-items-center gap-2 flex-nowrap">
                                     <button
                                         type="button"
-                                        className="btn btn-outline-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap"
+                                        className="btn btn-outline-dark rounded-3 d-flex align-items-center gap-2 px-2 px-xxl-3 py-2 text-nowrap"
                                         onClick={() => openLoginModal('login')}
                                         title="Đăng nhập tài khoản"
                                     >
@@ -218,7 +254,7 @@ export default function Navbar({
                                     </button>
                                     <button
                                         type="button"
-                                        className="btn btn-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap"
+                                        className="btn btn-dark rounded-3 d-flex align-items-center gap-2 px-2 px-xxl-3 py-2 text-nowrap"
                                         onClick={() => openLoginModal('register')}
                                         title="Đăng ký tài khoản mới"
                                     >

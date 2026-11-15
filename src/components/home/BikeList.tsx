@@ -56,7 +56,7 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
     const availableBrands = useMemo(() => {
         const brands = Array.from(new Set(bikesData.map((b: any) => b.brand).filter(Boolean)));
         return brands as string[];
-    }, []);
+    }, [bikesData]);
 
     const filteredBikes = useMemo(() => {
         let result = [...bikesData];
@@ -114,7 +114,7 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
         }
 
         return result;
-    }, [selectedCategory, searchKeyword, selectedBrands, selectedFrameSizes, onlyDiscount, priceRange, sortBy, isHomePage, isSearchPage]);
+    }, [bikesData, selectedCategory, searchKeyword, selectedBrands, selectedFrameSizes, onlyDiscount, priceRange, sortBy, isHomePage, isSearchPage]);
 
     const handleBrandToggle = (brand: string) => {
         setSelectedBrands((prev) =>
