@@ -1,4 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useToast } from './ToastContext';
+import { useAuth } from './AuthContext';
+import { apiRequest } from '../services/apiClient';
 
 export interface CartItem {
     id: string;
@@ -8,23 +11,31 @@ export interface CartItem {
     quantity: number;
     image: string;
     category?: string;
+    stock?: number;
     selectedSize?: string;
     selectedColor?: string;
 }
 
 interface CartContextValue {
     cartItems: CartItem[];
+    selectedIds: string[];
     totalCount: number;
     subtotal: number;
     shippingFee: number;
     totalAmount: number;
-    addToCart: (bike: any, quantity?: number) => void;
-    updateQuantity: (id: string, delta: number) => void;
-    removeFromCart: (id: string) => void;
-    clearCart: () => void;
+    addToCart: (bike: any, quantity?: number) => Promise<boolean>;
+    updateQuantity: (id: string, delta: number) => Promise<void>;
+    removeFromCart: (id: string) => Promise<void>;
+    clearCart: () => Promise<void>;
+    refreshCart: () => Promise<void>;
+    toggleItem: (id: string) => void;
+    toggleAll: () => void;
 }
 
-const CART_STORAGE_KEY = 'bikeshop_cart';
+interface CartResponse {
+    items: CartItem[];
+}
+
 const bikeImages = import.meta.glob('../assets/images/*.png', {
     eager: true,
     import: 'default',
@@ -32,110 +43,252 @@ const bikeImages = import.meta.glob('../assets/images/*.png', {
 });
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
+const LEGACY_CART_KEY = 'bikeshop_cart';
 
 function getImageUrl(image: string | undefined) {
     if (!image) return '';
-    if (/^(https?:|data:|blob:)/i.test(image)) return image;
+    if (/^(https?:|data:|blob:|\/assets\/)/i.test(image)) return image;
 
     const fileName = image.split('/').pop();
     return (bikeImages[`../assets/images/${fileName}`] as string | undefined) ?? image;
 }
 
-function loadCart(): CartItem[] {
-    try {
-        const savedCart = localStorage.getItem(CART_STORAGE_KEY);
-        if (!savedCart) return [];
-
-        const parsedCart = JSON.parse(savedCart);
-        if (!Array.isArray(parsedCart)) return [];
-
-        return parsedCart.filter((item) =>
-            item
-            && typeof item.id === 'string'
-            && typeof item.name === 'string'
-            && Number.isFinite(item.price)
-            && Number.isInteger(item.quantity)
-            && item.quantity > 0
-        );
-    } catch (error) {
-        console.error('Không thể đọc giỏ hàng đã lưu:', error);
-        return [];
-    }
-}
-
 export function CartProvider({ children }: { children: ReactNode }) {
-    const [cartItems, setCartItems] = useState<CartItem[]>(loadCart);
+    const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+        try {
+            const saved = localStorage.getItem(LEGACY_CART_KEY);
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const hasLoadedCart = useRef(false);
+    const previousUserIdRef = useRef<string | null>(null);
+    const { showToast } = useToast();
+    const { user } = useAuth();
+
+    const refreshCart = useCallback(async () => {
+        try {
+            const result = await apiRequest<CartResponse>('/api/cart');
+            const items = result.items.map((item) => ({ ...item, image: getImageUrl(item.image) }));
+            setCartItems(items);
+            localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(items));
+            setSelectedIds((currentIds) => {
+                const existingIds = new Set(items.map((item) => item.id));
+                const keptIds = currentIds.filter((id) => existingIds.has(id));
+                const newIds = items.map((item) => item.id).filter((id) => !currentIds.includes(id));
+                return [...keptIds, ...newIds];
+            });
+        } catch {
+            // Offline or server not running: cartItems already loaded from localStorage
+        }
+    }, []);
+
+    // Merge guest cart into user account cart on login
+    useEffect(() => {
+        if (!previousUserIdRef.current && user?.id) {
+            const mergeGuestCart = async () => {
+                const guestCartRaw = localStorage.getItem('bikeshop_guest_cart') || localStorage.getItem(LEGACY_CART_KEY);
+                if (guestCartRaw) {
+                    try {
+                        const guestItems: CartItem[] = JSON.parse(guestCartRaw);
+                        if (Array.isArray(guestItems) && guestItems.length > 0) {
+                            for (const gItem of guestItems) {
+                                await apiRequest('/api/cart/items', {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        bikeId: gItem.originalBikeId || gItem.id,
+                                        quantity: gItem.quantity,
+                                        selectedSize: gItem.selectedSize,
+                                        selectedColor: gItem.selectedColor,
+                                    }),
+                                }).catch(() => {});
+                            }
+                            localStorage.removeItem('bikeshop_guest_cart');
+                            showToast('Đã tự động gộp giỏ hàng khách vãng lai vào tài khoản của bạn!', 'info');
+                        }
+                    } catch {}
+                }
+                await refreshCart();
+            };
+            mergeGuestCart();
+        }
+        previousUserIdRef.current = user?.id || null;
+    }, [user?.id, refreshCart, showToast]);
 
     useEffect(() => {
-        try {
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
-        } catch (error) {
-            console.error('Không thể lưu giỏ hàng:', error);
+        if (hasLoadedCart.current) {
+            refreshCart().catch((error: Error) => {
+                showToast(error.message || 'Không thể tải giỏ hàng từ máy chủ.', 'danger');
+            });
+            return;
         }
-    }, [cartItems]);
+        hasLoadedCart.current = true;
 
-    const addToCart = (bike: any, quantity = 1) => {
-        if (!bike?.id || !Number.isInteger(quantity) || quantity < 1) return;
-
-        const item: CartItem = {
-            id: String(bike.id),
-            originalBikeId: bike.originalBikeId || String(bike.id),
-            name: bike.name || 'Xe đạp',
-            price: Number(bike.price) || 0,
-            quantity,
-            image: getImageUrl(bike.image),
-            category: bike.category,
-            selectedSize: bike.selectedSize,
-            selectedColor: bike.selectedColor,
+        const loadCart = async () => {
+            const savedCart = localStorage.getItem(LEGACY_CART_KEY);
+            if (savedCart) {
+                try {
+                    const legacyItems = JSON.parse(savedCart);
+                    const currentCart = await apiRequest<CartResponse>('/api/cart').catch(() => ({ items: [] }));
+                    if (Array.isArray(legacyItems) && currentCart.items.length === 0) {
+                        for (const item of legacyItems) {
+                            if (item?.id && Number.isInteger(item.quantity) && item.quantity > 0) {
+                                await apiRequest('/api/cart/items', {
+                                    method: 'POST',
+                                    body: JSON.stringify({ bikeId: item.originalBikeId || item.id, quantity: item.quantity }),
+                                }).catch(() => {});
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Lỗi khi đọc giỏ hàng cũ từ localStorage:', error);
+                }
+            }
+            await refreshCart();
         };
 
-        setCartItems((currentItems) => {
-            const existingItem = currentItems.find((cartItem) => cartItem.id === item.id);
-            if (!existingItem) return [...currentItems, item];
+        loadCart().catch(() => {});
+    }, [refreshCart, showToast, user?.id]);
 
-            return currentItems.map((cartItem) =>
-                cartItem.id === item.id
-                    ? { ...cartItem, quantity: cartItem.quantity + quantity }
-                    : cartItem
+    const addToCart = async (bike: any, quantity = 1) => {
+        if (!bike?.id || !Number.isInteger(quantity) || quantity < 1) return false;
+        try {
+            const result = await apiRequest<CartResponse>('/api/cart/items', {
+                method: 'POST',
+                body: JSON.stringify({
+                    bikeId: bike.originalBikeId || bike.id,
+                    quantity,
+                    selectedSize: bike.selectedSize,
+                    selectedColor: bike.selectedColor,
+                }),
+            });
+            const items = result.items.map((item) => ({ ...item, image: getImageUrl(item.image) }));
+            setCartItems(items);
+            localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(items));
+            if (!user) {
+                localStorage.setItem('bikeshop_guest_cart', JSON.stringify(items));
+            }
+            setSelectedIds((currentIds) => currentIds.includes(String(bike.id))
+                ? currentIds
+                : [...currentIds, String(bike.id)]
             );
-        });
+            return true;
+        } catch {
+            // Local fallback
+            setCartItems((prev) => {
+                const itemId = String(bike.id);
+                const existing = prev.find((item) => item.id === itemId);
+                let updated: CartItem[];
+                if (existing) {
+                    updated = prev.map((item) => item.id === itemId ? { ...item, quantity: item.quantity + quantity } : item);
+                } else {
+                    const newItem: CartItem = {
+                        id: itemId,
+                        originalBikeId: bike.originalBikeId || String(bike.id),
+                        name: bike.name || 'Xe đạp',
+                        price: Number(bike.price) || 0,
+                        quantity,
+                        image: getImageUrl(bike.image),
+                        category: bike.category,
+                        stock: bike.stock,
+                        selectedSize: bike.selectedSize,
+                        selectedColor: bike.selectedColor,
+                    };
+                    updated = [...prev, newItem];
+                }
+                localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(updated));
+                if (!user) {
+                    localStorage.setItem('bikeshop_guest_cart', JSON.stringify(updated));
+                }
+                return updated;
+            });
+            setSelectedIds((currentIds) => currentIds.includes(String(bike.id)) ? currentIds : [...currentIds, String(bike.id)]);
+            return true;
+        }
     };
 
-    const updateQuantity = (id: string, delta: number) => {
-        setCartItems((currentItems) => currentItems.map((item) =>
-            item.id === id
-                ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-                : item
-        ));
+    const updateQuantity = async (id: string, delta: number) => {
+        const item = cartItems.find((cartItem) => cartItem.id === id);
+        if (!item) return;
+        const quantity = Math.max(1, item.quantity + delta);
+        try {
+            const result = await apiRequest<CartResponse>(`/api/cart/items/${encodeURIComponent(id)}`, {
+                method: 'PUT',
+                body: JSON.stringify({ quantity }),
+            });
+            const items = result.items.map((cartItem) => ({ ...cartItem, image: getImageUrl(cartItem.image) }));
+            setCartItems(items);
+            localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(items));
+        } catch {
+            setCartItems((prev) => {
+                const updated = prev.map((cartItem) => cartItem.id === id ? { ...cartItem, quantity } : cartItem);
+                localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(updated));
+                return updated;
+            });
+        }
     };
 
-    const removeFromCart = (id: string) => {
-        setCartItems((currentItems) => currentItems.filter((item) => item.id !== id));
+    const removeFromCart = async (id: string) => {
+        try {
+            const result = await apiRequest<CartResponse>(`/api/cart/items/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            const items = result.items.map((item) => ({ ...item, image: getImageUrl(item.image) }));
+            setCartItems(items);
+            localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(items));
+            setSelectedIds((currentIds) => currentIds.filter((itemId) => itemId !== id));
+        } catch {
+            setCartItems((prev) => {
+                const updated = prev.filter((item) => item.id !== id);
+                localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(updated));
+                return updated;
+            });
+            setSelectedIds((currentIds) => currentIds.filter((itemId) => itemId !== id));
+        }
     };
 
-    const clearCart = () => setCartItems([]);
+    const clearCart = async () => {
+        try {
+            await apiRequest<CartResponse>('/api/cart', { method: 'DELETE' });
+        } catch {
+            // Ignore API error
+        }
+        setCartItems([]);
+        setSelectedIds([]);
+        localStorage.removeItem(LEGACY_CART_KEY);
+    };
+
+    const toggleItem = (id: string) => {
+        setSelectedIds((currentIds) => currentIds.includes(id)
+            ? currentIds.filter((itemId) => itemId !== id)
+            : [...currentIds, id]
+        );
+    };
+
+    const toggleAll = () => {
+        const allSelected = cartItems.length > 0 && cartItems.every((item) => selectedIds.includes(item.id));
+        setSelectedIds(allSelected ? [] : cartItems.map((item) => item.id));
+    };
 
     const totals = useMemo(() => {
         const totalCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
         const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
         const shippingFee = cartItems.length > 0 ? 150000 : 0;
-
-        return {
-            totalCount,
-            subtotal,
-            shippingFee,
-            totalAmount: subtotal + shippingFee,
-        };
+        return { totalCount, subtotal, shippingFee, totalAmount: subtotal + shippingFee };
     }, [cartItems]);
 
     return (
         <CartContext.Provider value={{
             cartItems,
+            selectedIds,
             ...totals,
             addToCart,
             updateQuantity,
             removeFromCart,
             clearCart,
+            refreshCart,
+            toggleItem,
+            toggleAll,
         }}>
             {children}
         </CartContext.Provider>

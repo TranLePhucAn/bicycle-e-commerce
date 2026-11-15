@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import bikesData from '../../data/bikes.json';
+import { loadBikes } from '../../services/bikeService';
 import BikeCard from './BikeCard';
 import '../../styles/home.css';
 
@@ -9,12 +9,35 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
     onSelectTab?: (category: string) => void;
     onSelectBike?: (bike: any) => void;
 }) {
+    const [bikesData, setBikesData] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
+    const [loadAttempt, setLoadAttempt] = useState(0);
     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
     const [selectedFrameSizes, setSelectedFrameSizes] = useState<string[]>([]);
     const [priceRange, setPriceRange] = useState<string>('all');
     const [onlyDiscount, setOnlyDiscount] = useState<boolean>(false);
     const [sortBy, setSortBy] = useState<string>('newest');
     const [brandSearch, setBrandSearch] = useState<string>('');
+
+    useEffect(() => {
+        let isActive = true;
+        setIsLoading(true);
+        setLoadError('');
+
+        loadBikes()
+            .then((bikes) => {
+                if (isActive) setBikesData(bikes);
+            })
+            .catch((error: Error) => {
+                if (isActive) setLoadError(error.message || 'Không thể tải danh sách xe.');
+            })
+            .finally(() => {
+                if (isActive) setIsLoading(false);
+            });
+
+        return () => { isActive = false; };
+    }, [loadAttempt]);
 
     const isSearchPage = Boolean(searchKeyword.trim());
     const isHomePage = selectedCategory === 'Tất cả' && !isSearchPage;
@@ -199,6 +222,21 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
             </div>
         );
     };
+
+    if (isLoading) {
+        return <section className="container py-5 text-center text-muted">Đang tải danh sách xe...</section>;
+    }
+
+    if (loadError) {
+        return (
+            <section className="container py-5 text-center">
+                <p className="text-danger">{loadError}</p>
+                <button className="btn btn-outline-dark" type="button" onClick={() => setLoadAttempt((value) => value + 1)}>
+                    Thử tải lại
+                </button>
+            </section>
+        );
+    }
 
     if (isSearchPage) {
         return (

@@ -8,6 +8,7 @@ interface NavbarProps {
     selectedCategory?: string | string[];
     onSelectTab?: (tab: string | string[]) => void;
     onSearch?: (keyword: string) => void;
+    onOpenCartDrawer?: () => void;
 }
 
 export default function Navbar({
@@ -15,6 +16,10 @@ export default function Navbar({
                                    selectedCategory = 'Tất cả',
                                    onSelectTab,
                                    onSearch,
+<<<<<<< HEAD
+                                   onOpenCartDrawer,
+=======
+>>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
                                }: NavbarProps) {
     const { user, isLoggedIn, logout, openLoginModal } = useAuth();
     const { showToast } = useToast();
@@ -28,11 +33,15 @@ export default function Navbar({
         }
     };
 
-    const handleLogout = () => {
-        logout();
-        showToast('Đã đăng xuất thành công.', 'info');
-        if (currentTab === 'history' && onSelectTab) {
-            onSelectTab('home');
+    const handleLogout = async () => {
+        try {
+            await logout();
+            showToast('Đã đăng xuất thành công.', 'info');
+            if (currentTab === 'history' && onSelectTab) {
+                onSelectTab('home');
+            }
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Không thể đăng xuất.', 'danger');
         }
     };
 
@@ -117,10 +126,18 @@ export default function Navbar({
 
                             <button
                                 type="button"
-                                onClick={(e) => handleTabClick(e, 'cart')}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    if (onOpenCartDrawer) onOpenCartDrawer();
+                                    else handleTabClick(e, 'cart');
+                                }}
                                 className={`btn rounded-3 d-flex align-items-center gap-2 px-3 py-2 text-nowrap ${
                                     currentTab === 'cart' ? 'btn-primary text-white' : 'btn-outline-secondary'
                                 }`}
+<<<<<<< HEAD
+                                title="Mở giỏ hàng"
+=======
+>>>>>>> c5829f8818321524f4d06b99f134873a21844e2d
                             >
                                 <i className="fa-solid fa-bag-shopping"></i>
                                 <span className="fw-semibold small">Giỏ hàng</span>
@@ -132,29 +149,61 @@ export default function Navbar({
                             </button>
 
                             {isLoggedIn ? (
-                                <div className="d-flex align-items-center gap-2 bg-light p-1 pe-2 rounded-3 border">
-                                    <span
-                                        className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
-                                        style={{ width: '32px', height: '32px', fontSize: '13px' }}
-                                    >
-                                        {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                                    </span>
-                                    <div className="d-none d-xl-flex flex-column text-start" style={{ lineHeight: 1.1 }}>
-                                        <span className="fw-semibold text-dark small">
-                                            {user?.name}
-                                        </span>
-                                        <span className="text-muted" style={{ fontSize: '10px' }}>
-                                            {user?.role || 'Thành viên'}
-                                        </span>
-                                    </div>
+                                <div className="dropdown">
                                     <button
                                         type="button"
-                                        className="btn btn-sm btn-outline-danger border-0 p-1 px-2"
-                                        onClick={handleLogout}
-                                        title="Đăng xuất"
+                                        className="btn btn-light rounded-3 d-flex align-items-center gap-2 p-1 pe-3 border dropdown-toggle shadow-none"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
                                     >
-                                        <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                                        <span
+                                            className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+                                            style={{ width: '32px', height: '32px', fontSize: '13px' }}
+                                        >
+                                            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                        </span>
+                                        <div className="d-none d-xl-flex flex-column text-start" style={{ lineHeight: 1.1 }}>
+                                            <span className="fw-semibold text-dark small">
+                                                {user?.name}
+                                            </span>
+                                            <span className="text-muted" style={{ fontSize: '10px' }}>
+                                                {user?.role || 'Thành viên'}
+                                            </span>
+                                        </div>
                                     </button>
+                                    <ul className="dropdown-menu dropdown-menu-end shadow border-0 mt-2 py-2">
+                                        <li>
+                                            <a
+                                                className={`dropdown-item py-2 d-flex align-items-center gap-2 ${currentTab === 'account' ? 'active bg-primary text-white' : ''}`}
+                                                href="#"
+                                                onClick={(e) => handleTabClick(e, 'account')}
+                                            >
+                                                <i className="fa-solid fa-user text-primary"></i>
+                                                <span>Hồ sơ & Sổ địa chỉ</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a
+                                                className={`dropdown-item py-2 d-flex align-items-center gap-2 ${currentTab === 'history' ? 'active bg-primary text-white' : ''}`}
+                                                href="#"
+                                                onClick={(e) => handleTabClick(e, 'history')}
+                                            >
+                                                <i className="fa-solid fa-clock-rotate-left text-secondary"></i>
+                                                <span>Lịch sử đơn hàng</span>
+                                            </a>
+                                        </li>
+                                        <li><hr className="dropdown-divider my-1" /></li>
+                                        <li>
+                                            <button
+                                                type="button"
+                                                className="dropdown-item py-2 text-danger d-flex align-items-center gap-2"
+                                                onClick={handleLogout}
+                                            >
+                                                <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                                                <span>Đăng xuất</span>
+                                            </button>
+                                        </li>
+                                    </ul>
                                 </div>
                             ) : (
                                 <div className="d-flex align-items-center gap-2">

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -13,14 +13,20 @@ export default function ProtectedRoute({
     onRedirectHome,
     routeName = 'trang này',
 }: ProtectedRouteProps) {
-    const { isLoggedIn, openLoginModal } = useAuth();
+    const { isLoggedIn, isAuthLoading, openLoginModal } = useAuth();
     const { showToast } = useToast();
+    const hasShownLoginToast = useRef(false);
 
     useEffect(() => {
-        if (!isLoggedIn) {
+        if (isLoggedIn) {
+            hasShownLoginToast.current = false;
+        } else if (!isAuthLoading && !hasShownLoginToast.current) {
+            hasShownLoginToast.current = true;
             showToast(`Vui lòng đăng nhập để truy cập ${routeName}!`, 'warning');
         }
-    }, [isLoggedIn, routeName, showToast]);
+    }, [isAuthLoading, isLoggedIn, routeName, showToast]);
+
+    if (isAuthLoading) return null;
 
     if (isLoggedIn) {
         return <>{children}</>;

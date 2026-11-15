@@ -13,13 +13,12 @@ export default function LoginModal() {
         login,
         quickLogin,
         register,
-        isEmailTaken,
     } = useAuth();
     const { showToast } = useToast();
 
     // State cho Đăng Nhập
-    const [loginEmail, setLoginEmail] = useState('an.tran@example.com');
-    const [loginPassword, setLoginPassword] = useState('password123');
+    const [loginEmail, setLoginEmail] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
     const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string }>({});
 
     // State cho Đăng Ký
@@ -86,8 +85,6 @@ export default function LoginModal() {
             errors.email = 'Vui lòng nhập địa chỉ Email.';
         } else if (!EMAIL_REGEX.test(email)) {
             errors.email = 'Định dạng email không hợp lệ (ví dụ: name@example.com).';
-        } else if (isEmailTaken(email)) {
-            errors.email = 'Email này đã tồn tại trong hệ thống! Vui lòng chọn email khác.';
         }
 
         if (!regPassword) {
@@ -107,14 +104,14 @@ export default function LoginModal() {
     };
 
     // Xử lý nộp form Đăng Nhập
-    const handleLoginSubmit = (e: React.FormEvent) => {
+    const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateLoginForm()) {
             showToast('Vui lòng kiểm tra lại thông tin đăng nhập!', 'warning');
             return;
         }
 
-        const res = login(loginEmail, loginPassword);
+        const res = await login(loginEmail, loginPassword);
         if (res.success) {
             showToast(res.message, 'success');
         } else {
@@ -124,14 +121,14 @@ export default function LoginModal() {
     };
 
     // Xử lý nộp form Đăng Ký
-    const handleRegisterSubmit = (e: React.FormEvent) => {
+    const handleRegisterSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateRegisterForm()) {
             showToast('Vui lòng hoàn thiện đúng các trường thông tin!', 'warning');
             return;
         }
 
-        const res = register({
+        const res = await register({
             name: regName,
             email: regEmail,
             password: regPassword,
@@ -151,8 +148,8 @@ export default function LoginModal() {
     };
 
     // Xử lý Đăng Nhập Nhanh (Demo)
-    const handleQuickLogin = () => {
-        const res = quickLogin();
+    const handleQuickLogin = async () => {
+        const res = await quickLogin();
         if (res.success) {
             showToast(res.message, 'success');
         }
@@ -374,15 +371,6 @@ export default function LoginModal() {
                                             }`}
                                             placeholder="name@example.com"
                                             value={regEmail}
-                                            onBlur={() => {
-                                                const email = regEmail.trim();
-                                                if (email && EMAIL_REGEX.test(email) && isEmailTaken(email)) {
-                                                    setRegErrors((prev) => ({
-                                                        ...prev,
-                                                        email: 'Email này đã tồn tại trong hệ thống!',
-                                                    }));
-                                                }
-                                            }}
                                             onChange={(e) => {
                                                 setRegEmail(e.target.value);
                                                 if (regErrors.email) {
