@@ -179,7 +179,10 @@ function MainLayout() {
                         routeName="Lịch sử đơn hàng"
                     >
                         <Suspense fallback={<div className="container py-5 text-center" role="status">Đang tải lịch sử đơn hàng...</div>}>
-                            <OrderHistory onContinueShopping={() => setCurrentTab('home')} />
+                            <OrderHistory
+                                onContinueShopping={() => setCurrentTab('home')}
+                                onViewCart={() => setCurrentTab('cart')}
+                            />
                         </Suspense>
                     </ProtectedRoute>
                 )}
