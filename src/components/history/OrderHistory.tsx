@@ -6,6 +6,8 @@ import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css';
 import 'datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { useCart } from '../../context/CartContext';
+import { apiRequest } from '../../services/apiClient';
 import {
     advanceOrderStatus,
     cancelOrder,
@@ -19,6 +21,7 @@ DataTable.use(DataTablesBootstrap);
 
 interface OrderHistoryProps {
     onContinueShopping: () => void;
+    onViewCart: () => void;
 }
 
 const ORDER_STATUSES: OrderStatus[] = [
@@ -52,14 +55,16 @@ function getStatusClass(status: OrderStatus): string {
     return 'bg-primary';
 }
 
-export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) {
+export default function OrderHistory({ onContinueShopping, onViewCart }: OrderHistoryProps) {
     const { user } = useAuth();
     const { showToast } = useToast();
+    const { cartItems, addToCart } = useCart();
     const [orders, setOrders] = useState<OrderRecord[]>([]);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState('');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
+    const [repurchasingOrderId, setRepurchasingOrderId] = useState<string | null>(null);
     const isDemoMode = new URLSearchParams(window.location.search).get('demo') === '1';
 
     useEffect(() => {
@@ -137,6 +142,47 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
         }
     };
 
+    const handleRepurchase = async (order: OrderRecord) => {
+        if (repurchasingOrderId) return;
+        setRepurchasingOrderId(order.id);
+        try {
+            const result = await apiRequest<{ bikes: { id: string; name: string; price: number; image: string; stock: number }[] }>('/api/bikes');
+            const unavailable: string[] = [];
+            const orderItems = new Map<string, { item: OrderRecord['items'][number]; quantity: number }>();
+            for (const item of order.items) {
+                const current = orderItems.get(item.id);
+                orderItems.set(item.id, { item, quantity: (current?.quantity || 0) + item.quantity });
+            }
+            const availableItems = Array.from(orderItems.values()).flatMap(({ item, quantity }) => {
+                const bike = result.bikes.find((candidate) => candidate.id === item.id);
+                const inCart = cartItems.find((cartItem) => cartItem.id === item.id)?.quantity || 0;
+                if (!bike || quantity + inCart > bike.stock) {
+                    unavailable.push(item.name);
+                    return [];
+                }
+                return [{ bike, quantity }];
+            });
+
+            if (availableItems.length === 0) {
+                showToast('Sản phẩm trong đơn cũ hiện không đủ tồn kho để mua lại.', 'warning');
+                return;
+            }
+
+            for (const item of availableItems) {
+                const added = await addToCart(item.bike, item.quantity);
+                if (!added) throw new Error(`Không thể thêm ${item.bike.name} vào giỏ.`);
+            }
+            showToast(unavailable.length
+                ? `Đã thêm sản phẩm còn hàng. Bỏ qua: ${unavailable.join(', ')}.`
+                : 'Đã thêm các sản phẩm của đơn hàng vào giỏ.', unavailable.length ? 'warning' : 'success');
+            onViewCart();
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Không thể kiểm tra tồn kho để mua lại.', 'danger');
+        } finally {
+            setRepurchasingOrderId(null);
+        }
+    };
+
     return (
         <section className="container py-5">
             <div className="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3 flex-wrap gap-2">
@@ -161,6 +207,8 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
                     onBack={() => setSelectedOrderId(null)}
                     onCancel={() => handleCancelOrder(selectedOrder)}
                     onAdvance={() => handleAdvanceOrder(selectedOrder)}
+                    onRepurchase={() => handleRepurchase(selectedOrder)}
+                    isRepurchasing={repurchasingOrderId === selectedOrder.id}
                 />
             ) : (
                 <div className="card border-0 shadow-sm">
@@ -244,12 +292,16 @@ function OrderDetails({
     onBack,
     onCancel,
     onAdvance,
+    onRepurchase,
+    isRepurchasing,
 }: {
     order: OrderRecord;
     isDemoMode: boolean;
     onBack: () => void;
     onCancel: () => void;
     onAdvance: () => void;
+    onRepurchase: () => void;
+    isRepurchasing: boolean;
 }) {
     const status = getOrderStatus(order);
     const currentStep = ACTIVE_STATUSES.indexOf(status);
@@ -329,6 +381,10 @@ function OrderDetails({
                     {status === 'Chờ xác nhận' && (
                         <button type="button" className="btn btn-outline-danger" onClick={onCancel}>Hủy đơn hàng</button>
                     )}
+                    <button type="button" className="btn btn-primary" onClick={onRepurchase} disabled={isRepurchasing}>
+                        <i className={`fa-solid ${isRepurchasing ? 'fa-spinner fa-spin' : 'fa-cart-plus'} me-2`} aria-hidden="true"></i>
+                        {isRepurchasing ? 'Đang thêm vào giỏ...' : 'Mua lại'}
+                    </button>
                     {isDemoMode && status !== 'Giao hàng thành công' && status !== 'Đã hủy' && (
                         <button type="button" className="btn btn-warning" onClick={onAdvance}>
                             <i className="fa-solid fa-forward-step me-2" aria-hidden="true"></i>Đẩy nhanh trạng thái
