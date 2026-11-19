@@ -1,9 +1,13 @@
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
+import { useWishlist } from '../../context/WishlistContext';
 
 export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailClick?: (bike: any) => void }) {
     const { addToCart } = useCart();
     const { showToast } = useToast();
+    const { isInWishlist, toggleWishlist } = useWishlist();
+
+    const liked = isInWishlist(bike.id);
 
     const handleAddToCart = async () => {
         const added = await addToCart(bike);
@@ -60,7 +64,17 @@ export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailC
                 </div>
 
                 <div className="card-body d-flex flex-column">
-                    <small className="text-muted mb-1">{bike.category}</small>
+                    <div className="d-flex justify-content-between align-items-center mb-1 gap-2">
+                        <small className="text-muted text-truncate">{bike.category}</small>
+                        <button
+                            type="button"
+                            className="btn btn-sm p-0 border-0 bg-transparent flex-shrink-0"
+                            title={liked ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
+                            onClick={() => toggleWishlist(bike)}
+                        >
+                            <i className={`${liked ? 'fa-solid text-danger' : 'fa-regular text-secondary'} fa-heart fs-6`}></i>
+                        </button>
+                    </div>
 
                     <h5
                         className="card-title fs-6 fw-bold text-dark text-truncate mb-2"
