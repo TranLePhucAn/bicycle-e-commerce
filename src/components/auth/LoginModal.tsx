@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, type AuthModalMode } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { apiRequest } from '../../services/apiClient';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -36,6 +37,12 @@ export default function LoginModal() {
     // Hiển thị/Ẩn mật khẩu
     const [showLoginPassword, setShowLoginPassword] = useState(false);
     const [showRegPassword, setShowRegPassword] = useState(false);
+    const [showForgotPassword, setShowForgotPassword] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetCode, setResetCode] = useState('');
+    const [resetPassword, setResetPassword] = useState('');
+    const [issuedResetCode, setIssuedResetCode] = useState('');
+    const [resetStep, setResetStep] = useState<'email' | 'code'>('email');
 
     // Reset lỗi khi chuyển tab hoặc mở modal
     useEffect(() => {
@@ -155,6 +162,48 @@ export default function LoginModal() {
         }
     };
 
+    const handleRequestReset = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!EMAIL_REGEX.test(resetEmail.trim())) {
+            showToast('Vui lòng nhập email hợp lệ.', 'warning');
+            return;
+        }
+        try {
+            const result = await apiRequest<{ demoCode: string }>('/api/auth/forgot-password', {
+                method: 'POST',
+                body: JSON.stringify({ email: resetEmail.trim() }),
+            });
+            setIssuedResetCode(result.demoCode);
+            setResetStep('code');
+            showToast('Mã xác nhận mô phỏng đã được tạo.', 'success');
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Không thể tạo mã xác nhận.', 'danger');
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (resetPassword.length < 6) {
+            showToast('Mật khẩu mới cần ít nhất 6 ký tự.', 'warning');
+            return;
+        }
+        try {
+            const result = await apiRequest<{ message: string }>('/api/auth/reset-password', {
+                method: 'POST',
+                body: JSON.stringify({ email: resetEmail.trim(), code: resetCode, newPassword: resetPassword }),
+            });
+            showToast(result.message, 'success');
+            setShowForgotPassword(false);
+            setResetStep('email');
+            setResetEmail('');
+            setResetCode('');
+            setResetPassword('');
+            setLoginEmail(resetEmail.trim());
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Không thể đặt lại mật khẩu.', 'danger');
+        }
+    };
+
     const switchMode = (mode: AuthModalMode) => {
         setAuthModalMode(mode);
     };
@@ -221,6 +270,33 @@ export default function LoginModal() {
                     </div>
 
                     <div className="modal-body p-4 bg-white">
+                        {showForgotPassword ? (
+                            <div>
+                                <h6 className="fw-bold mb-2">Quên mật khẩu</h6>
+                                <p className="small text-muted">Nhập email tài khoản để nhận mã xác nhận mô phỏng.</p>
+                                {resetStep === 'email' ? (
+                                    <form onSubmit={handleRequestReset}>
+                                        <label className="form-label small fw-semibold" htmlFor="reset-email">Email</label>
+                                        <input id="reset-email" type="email" className="form-control mb-3" value={resetEmail}
+                                            onChange={(e) => setResetEmail(e.target.value)} required />
+                                        <button className="btn btn-primary w-100" type="submit">Tạo mã xác nhận</button>
+                                    </form>
+                                ) : (
+                                    <form onSubmit={handleResetPassword}>
+                                        <div className="alert alert-info small">Mã demo: <strong>{issuedResetCode}</strong> (có hiệu lực 10 phút)</div>
+                                        <label className="form-label small fw-semibold" htmlFor="reset-code">Mã xác nhận</label>
+                                        <input id="reset-code" className="form-control mb-3" inputMode="numeric" maxLength={6}
+                                            value={resetCode} onChange={(e) => setResetCode(e.target.value)} required />
+                                        <label className="form-label small fw-semibold" htmlFor="reset-password">Mật khẩu mới</label>
+                                        <input id="reset-password" type="password" className="form-control mb-3" minLength={6}
+                                            value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} required />
+                                        <button className="btn btn-primary w-100" type="submit">Đặt lại mật khẩu</button>
+                                    </form>
+                                )}
+                                <button type="button" className="btn btn-link px-0 mt-2 text-decoration-none"
+                                    onClick={() => { setShowForgotPassword(false); setResetStep('email'); }}>Quay lại đăng nhập</button>
+                            </div>
+                        ) : <>
                         {/* ===================== FORM ĐĂNG NHẬP ===================== */}
                         {authModalMode === 'login' && (
                             <form onSubmit={handleLoginSubmit} noValidate>
@@ -297,6 +373,13 @@ export default function LoginModal() {
                                     <i className="fa-solid fa-arrow-right-to-bracket me-2"></i>
                                     Đăng Nhập
                                 </button>
+
+                                <div className="text-end mb-2">
+                                    <button type="button" className="btn btn-link p-0 small text-decoration-none"
+                                        onClick={() => { setResetEmail(loginEmail); setShowForgotPassword(true); }}>
+                                        Quên mật khẩu?
+                                    </button>
+                                </div>
 
                                 <button
                                     type="button"
@@ -475,6 +558,7 @@ export default function LoginModal() {
                                 </div>
                             </form>
                         )}
+                        </>}
                     </div>
                 </div>
             </div>

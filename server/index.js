@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomInt, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -10,6 +10,7 @@ const serverDirectory = dirname(fileURLToPath(import.meta.url));
 const storePath = join(serverDirectory, 'data', 'store.json');
 const bikesPath = join(serverDirectory, '..', 'src', 'data', 'bikes.json');
 const sessions = new Map();
+const passwordResetRequests = new Map();
 const sessionCookie = 'bikeshop_session';
 const sessionDuration = 30 * 24 * 60 * 60 * 1000;
 
@@ -299,6 +300,54 @@ async function handleRequest(request, response) {
         sessions.set(token, { userId: account.id, expiresAt: Date.now() + sessionDuration });
         if (mergeGuestCart(request, account)) await saveStore();
         send(response, 200, { user: publicUser(account) }, { 'Set-Cookie': sessionCookieHeader(token) });
+        return;
+    }
+
+    if (method === 'POST' && path === '/api/auth/forgot-password') {
+        const body = await readBody(request);
+        const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            send(response, 400, { error: 'Địa chỉ email không hợp lệ.' });
+            return;
+        }
+        const account = store.users.find((item) => item.email.toLowerCase() === email);
+        if (!account) {
+            send(response, 404, { error: 'Không tìm thấy tài khoản với email này.' });
+            return;
+        }
+        const code = String(randomInt(0, 1000000)).padStart(6, '0');
+        passwordResetRequests.set(email, { userId: account.id, code, expiresAt: Date.now() + 10 * 60 * 1000 });
+        send(response, 200, { message: 'Mã xác nhận mô phỏng đã được tạo.', demoCode: code });
+        return;
+    }
+
+    if (method === 'POST' && path === '/api/auth/reset-password') {
+        const body = await readBody(request);
+        const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+        const code = typeof body.code === 'string' ? body.code.trim() : '';
+        const newPassword = typeof body.newPassword === 'string' ? body.newPassword : '';
+        const resetRequest = passwordResetRequests.get(email);
+        if (!resetRequest || resetRequest.expiresAt < Date.now() || resetRequest.code !== code) {
+            passwordResetRequests.delete(email);
+            send(response, 400, { error: 'Mã xác nhận không đúng hoặc đã hết hạn.' });
+            return;
+        }
+        if (newPassword.length < 6 || newPassword.length > 256) {
+            send(response, 400, { error: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+            return;
+        }
+        const account = store.users.find((item) => item.id === resetRequest.userId);
+        if (!account) {
+            passwordResetRequests.delete(email);
+            send(response, 404, { error: 'Không tìm thấy tài khoản.' });
+            return;
+        }
+        const { salt, hash } = await hashPassword(newPassword);
+        account.passwordSalt = salt;
+        account.passwordHash = hash;
+        passwordResetRequests.delete(email);
+        await saveStore();
+        send(response, 200, { message: 'Đặt lại mật khẩu thành công.' });
         return;
     }
 
