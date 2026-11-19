@@ -64,6 +64,7 @@ export default function OrderHistory({ onContinueShopping, onViewCart }: OrderHi
     const [statusFilter, setStatusFilter] = useState('');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
+    const [repurchasingOrderId, setRepurchasingOrderId] = useState<string | null>(null);
     const isDemoMode = new URLSearchParams(window.location.search).get('demo') === '1';
 
     useEffect(() => {
@@ -142,17 +143,24 @@ export default function OrderHistory({ onContinueShopping, onViewCart }: OrderHi
     };
 
     const handleRepurchase = async (order: OrderRecord) => {
+        if (repurchasingOrderId) return;
+        setRepurchasingOrderId(order.id);
         try {
             const result = await apiRequest<{ bikes: { id: string; name: string; price: number; image: string; stock: number }[] }>('/api/bikes');
             const unavailable: string[] = [];
-            const availableItems = order.items.flatMap((item) => {
+            const orderItems = new Map<string, { item: OrderRecord['items'][number]; quantity: number }>();
+            for (const item of order.items) {
+                const current = orderItems.get(item.id);
+                orderItems.set(item.id, { item, quantity: (current?.quantity || 0) + item.quantity });
+            }
+            const availableItems = Array.from(orderItems.values()).flatMap(({ item, quantity }) => {
                 const bike = result.bikes.find((candidate) => candidate.id === item.id);
                 const inCart = cartItems.find((cartItem) => cartItem.id === item.id)?.quantity || 0;
-                if (!bike || item.quantity + inCart > bike.stock) {
+                if (!bike || quantity + inCart > bike.stock) {
                     unavailable.push(item.name);
                     return [];
                 }
-                return [{ bike, quantity: item.quantity }];
+                return [{ bike, quantity }];
             });
 
             if (availableItems.length === 0) {
@@ -161,7 +169,8 @@ export default function OrderHistory({ onContinueShopping, onViewCart }: OrderHi
             }
 
             for (const item of availableItems) {
-                await addToCart(item.bike, item.quantity);
+                const added = await addToCart(item.bike, item.quantity);
+                if (!added) throw new Error(`Không thể thêm ${item.bike.name} vào giỏ.`);
             }
             showToast(unavailable.length
                 ? `Đã thêm sản phẩm còn hàng. Bỏ qua: ${unavailable.join(', ')}.`
@@ -169,6 +178,8 @@ export default function OrderHistory({ onContinueShopping, onViewCart }: OrderHi
             onViewCart();
         } catch (error) {
             showToast(error instanceof Error ? error.message : 'Không thể kiểm tra tồn kho để mua lại.', 'danger');
+        } finally {
+            setRepurchasingOrderId(null);
         }
     };
 
@@ -197,6 +208,7 @@ export default function OrderHistory({ onContinueShopping, onViewCart }: OrderHi
                     onCancel={() => handleCancelOrder(selectedOrder)}
                     onAdvance={() => handleAdvanceOrder(selectedOrder)}
                     onRepurchase={() => handleRepurchase(selectedOrder)}
+                    isRepurchasing={repurchasingOrderId === selectedOrder.id}
                 />
             ) : (
                 <div className="card border-0 shadow-sm">
@@ -281,6 +293,7 @@ function OrderDetails({
     onCancel,
     onAdvance,
     onRepurchase,
+    isRepurchasing,
 }: {
     order: OrderRecord;
     isDemoMode: boolean;
@@ -288,6 +301,7 @@ function OrderDetails({
     onCancel: () => void;
     onAdvance: () => void;
     onRepurchase: () => void;
+    isRepurchasing: boolean;
 }) {
     const status = getOrderStatus(order);
     const currentStep = ACTIVE_STATUSES.indexOf(status);
@@ -367,8 +381,9 @@ function OrderDetails({
                     {status === 'Chờ xác nhận' && (
                         <button type="button" className="btn btn-outline-danger" onClick={onCancel}>Hủy đơn hàng</button>
                     )}
-                    <button type="button" className="btn btn-primary" onClick={onRepurchase}>
-                        <i className="fa-solid fa-cart-plus me-2" aria-hidden="true"></i>Mua lại
+                    <button type="button" className="btn btn-primary" onClick={onRepurchase} disabled={isRepurchasing}>
+                        <i className={`fa-solid ${isRepurchasing ? 'fa-spinner fa-spin' : 'fa-cart-plus'} me-2`} aria-hidden="true"></i>
+                        {isRepurchasing ? 'Đang thêm vào giỏ...' : 'Mua lại'}
                     </button>
                     {isDemoMode && status !== 'Giao hàng thành công' && status !== 'Đã hủy' && (
                         <button type="button" className="btn btn-warning" onClick={onAdvance}>
