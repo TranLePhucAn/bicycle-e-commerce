@@ -173,6 +173,7 @@ export function addNotification(
     };
     notifications.unshift(notification);
     writeArray(NOTIFICATIONS_STORAGE_KEY, notifications);
+    window.dispatchEvent(new CustomEvent('bike-notifications-changed', { detail: { userId } }));
     return notification;
 }
 
@@ -181,4 +182,5 @@ export function markNotificationsRead(userId: string): void {
         notification.userId === userId ? { ...notification, read: true } : notification
     );
     writeArray(NOTIFICATIONS_STORAGE_KEY, notifications);
+    window.dispatchEvent(new CustomEvent('bike-notifications-changed', { detail: { userId } }));
 }

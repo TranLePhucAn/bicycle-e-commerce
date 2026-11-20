@@ -6,7 +6,7 @@ interface CartDrawerProps {
     isOpen: boolean;
     onClose: () => void;
     onViewCart: () => void;
-    onCheckout: () => void;
+    onCheckout: (items: Array<{ id: string; name: string; price: number; quantity: number; image?: string }>) => void;
 }
 
 export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: CartDrawerProps) {
@@ -182,7 +182,13 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
                                 className="btn btn-dark fw-bold py-2"
                                 onClick={() => {
                                     onClose();
-                                    onCheckout();
+                                    onCheckout(cartItems.map((item) => ({
+                                        id: item.originalBikeId || item.id,
+                                        name: item.name,
+                                        price: item.price,
+                                        quantity: item.quantity,
+                                        image: item.image,
+                                    })));
                                 }}
                             >
                                 <i className="fa-solid fa-credit-card me-2"></i>Tiến Hành Thanh Toán
