@@ -21,6 +21,7 @@ import {
     addNotification,
     type ReturnRequest,
 } from '../../services/customerService';
+import InvoiceModal from './InvoiceModal';
 
 DataTable.use(DataTablesBootstrap);
 
@@ -64,13 +65,14 @@ function canCancelOrderStatus(status: OrderStatus): boolean {
     return status !== 'Giao hàng thành công' && status !== 'Đã hủy';
 }
 
-export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) {
+export default function OrderHistory({ onContinueShopping, onViewCart }: OrderHistoryProps) {
     const { user } = useAuth();
     const { showToast } = useToast();
     const { cartItems, addToCart } = useCart();
     const [orders, setOrders] = useState<OrderRecord[]>([]);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
     const [pendingCancelOrder, setPendingCancelOrder] = useState<OrderRecord | null>(null);
+    const [invoiceOrder, setInvoiceOrder] = useState<OrderRecord | null>(null);
     const [statusFilter, setStatusFilter] = useState('');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
@@ -238,7 +240,7 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
                             <div className="col-12 col-md-6 col-lg-3">
                                 <label className="form-label" htmlFor="order-status">Trạng thái</label>
                                 <select id="order-status" className="form-select" value={statusFilter}
-                                    onChange={(event) => setStatusFilter(event.target.value)}>
+                                        onChange={(event) => setStatusFilter(event.target.value)}>
                                     <option value="">Tất cả trạng thái</option>
                                     {ORDER_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
                                 </select>
@@ -246,12 +248,12 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
                             <div className="col-6 col-lg-3">
                                 <label className="form-label" htmlFor="order-from-date">Từ ngày</label>
                                 <input id="order-from-date" className="form-control" type="date" value={fromDate}
-                                    max={toDate || undefined} onChange={(event) => setFromDate(event.target.value)} />
+                                       max={toDate || undefined} onChange={(event) => setFromDate(event.target.value)} />
                             </div>
                             <div className="col-6 col-lg-3">
                                 <label className="form-label" htmlFor="order-to-date">Đến ngày</label>
                                 <input id="order-to-date" className="form-control" type="date" value={toDate}
-                                    min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} />
+                                       min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} />
                             </div>
                         </div>
 
@@ -263,15 +265,15 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
                             >
                                 <Column data="id" title="Mã đơn" />
                                 <Column data="createdAt" title="Ngày đặt"
-                                    render={(data, type) => type === 'display' ? formatDate(data) : data} />
+                                        render={(data, type) => type === 'display' ? formatDate(data) : data} />
                                 <Column data={null} title="Sản phẩm"
-                                    render={(_data, type, order) => {
-                                        const itemCount = order.items.reduce(
-                                            (count: number, item: OrderRecord['items'][number]) => count + item.quantity,
-                                            0,
-                                        );
-                                        return type === 'display' ? `${itemCount} sản phẩm` : itemCount;
-                                    }} />
+                                        render={(_data, type, order) => {
+                                            const itemCount = order.items.reduce(
+                                                (count: number, item: OrderRecord['items'][number]) => count + item.quantity,
+                                                0,
+                                            );
+                                            return type === 'display' ? `${itemCount} sản phẩm` : itemCount;
+                                        }} />
                                 <Column data={null} title="Trạng thái">
                                     {(_data, type, order) => {
                                         const status = getOrderStatus(order);
@@ -281,7 +283,7 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
                                     }}
                                 </Column>
                                 <Column data="total" title="Tổng tiền"
-                                    render={(data, type) => type === 'display' ? formatPrice(data) : data} />
+                                        render={(data, type) => type === 'display' ? formatPrice(data) : data} />
                                 <Column data={null} title="Thao tác">
                                     {(_data, type, order) => {
                                         if (type !== 'display') return null;
@@ -289,10 +291,15 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
                                         return (
                                             <div className="d-flex gap-2 justify-content-end">
                                                 <button type="button" className="btn btn-sm btn-outline-primary"
-                                                    onClick={() => setSelectedOrderId(order.id)}>Chi tiết</button>
+                                                        onClick={() => setSelectedOrderId(order.id)}>Chi tiết</button>
+                                                <button type="button" className="btn btn-sm btn-outline-secondary"
+                                                        title="In hóa đơn"
+                                                        onClick={() => setInvoiceOrder(order)}>
+                                                    <i className="fa-solid fa-print me-1" aria-hidden="true"></i>In hóa đơn
+                                                </button>
                                                 {canCancelOrderStatus(status) && (
                                                     <button type="button" className="btn btn-sm btn-outline-danger"
-                                                        onClick={() => requestCancelOrder(order)}>Hủy đơn</button>
+                                                            onClick={() => requestCancelOrder(order)}>Hủy đơn</button>
                                                 )}
                                             </div>
                                         );
@@ -303,6 +310,13 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
                     </div>
                 </div>
             )}
+
+            <InvoiceModal
+                order={invoiceOrder}
+                customerName={user?.name}
+                onClose={() => setInvoiceOrder(null)}
+            />
+
             {pendingCancelOrder && (
                 <div
                     className="modal fade show d-block"
