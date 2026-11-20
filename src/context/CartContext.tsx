@@ -89,26 +89,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!previousUserIdRef.current && user?.id) {
             const mergeGuestCart = async () => {
-                const guestCartRaw = localStorage.getItem('bikeshop_guest_cart') || localStorage.getItem(LEGACY_CART_KEY);
+                const guestCartRaw = localStorage.getItem('bikeshop_guest_cart');
                 if (guestCartRaw) {
                     try {
                         const guestItems: CartItem[] = JSON.parse(guestCartRaw);
                         if (Array.isArray(guestItems) && guestItems.length > 0) {
+                            const unmergedItems: CartItem[] = [];
                             for (const gItem of guestItems) {
-                                await apiRequest('/api/cart/items', {
-                                    method: 'POST',
-                                    body: JSON.stringify({
-                                        bikeId: gItem.originalBikeId || gItem.id,
-                                        quantity: gItem.quantity,
-                                        selectedSize: gItem.selectedSize,
-                                        selectedColor: gItem.selectedColor,
-                                    }),
-                                }).catch(() => {});
+                                try {
+                                    await apiRequest('/api/cart/items', {
+                                        method: 'POST',
+                                        body: JSON.stringify({
+                                            bikeId: gItem.originalBikeId || gItem.id,
+                                            quantity: gItem.quantity,
+                                            selectedSize: gItem.selectedSize,
+                                            selectedColor: gItem.selectedColor,
+                                        }),
+                                    });
+                                } catch (error) {
+                                    console.warn(`Không thể gộp sản phẩm ${gItem.name} vào giỏ hàng:`, error);
+                                    unmergedItems.push(gItem);
+                                }
                             }
-                            localStorage.removeItem('bikeshop_guest_cart');
-                            showToast('Đã tự động gộp giỏ hàng khách vãng lai vào tài khoản của bạn!', 'info');
+                            if (unmergedItems.length === 0) {
+                                localStorage.removeItem('bikeshop_guest_cart');
+                                showToast('Đã tự động gộp giỏ hàng khách vãng lai vào tài khoản của bạn!', 'info');
+                            } else {
+                                localStorage.setItem('bikeshop_guest_cart', JSON.stringify(unmergedItems));
+                                showToast('Một số sản phẩm trong giỏ khách chưa gộp được do giới hạn tồn kho. Hãy kiểm tra lại giỏ hàng.', 'warning');
+                            }
                         }
-                    } catch {}
+                    } catch (error) {
+                        console.error('Dữ liệu giỏ hàng khách không hợp lệ:', error);
+                    }
                 }
                 await refreshCart();
             };

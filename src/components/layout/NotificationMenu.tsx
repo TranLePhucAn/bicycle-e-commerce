@@ -23,10 +23,16 @@ export default function NotificationMenu() {
         const handleStorage = (event: StorageEvent) => {
             if (event.key === 'bike_notifications') refresh();
         };
+        const handleNotificationChange = (event: Event) => {
+            const changedUserId = (event as CustomEvent<{ userId: string }>).detail?.userId;
+            if (changedUserId === user.id) refresh();
+        };
         window.addEventListener('storage', handleStorage);
+        window.addEventListener('bike-notifications-changed', handleNotificationChange);
         return () => {
             window.clearInterval(intervalId);
             window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('bike-notifications-changed', handleNotificationChange);
         };
     }, [user]);
 
