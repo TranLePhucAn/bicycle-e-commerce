@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useCart } from '../../context/CartContext';
+import NotificationMenu from './NotificationMenu';
 
 interface NavbarProps {
     currentTab?: string;
@@ -103,6 +104,7 @@ export default function Navbar({
                         </div>
 
                         <div className="col-12 col-md-6 d-flex justify-content-center justify-content-md-end align-items-center gap-2 flex-wrap">
+                            <NotificationMenu />
                             <button
                                 type="button"
                                 onClick={(e) => handleTabClick(e, 'history')}

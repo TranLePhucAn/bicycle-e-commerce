@@ -14,6 +14,7 @@ import LoginModal from './components/auth/LoginModal';
 import Checkout from './components/checkout/Checkout';
 import OrderSuccess from './components/checkout/OrderSuccess';
 import type { OrderRecord } from './services/checkoutService';
+import { addNotification } from './services/customerService';
 
 const OrderHistory = lazy(() => import('./components/history/OrderHistory'));
 
@@ -21,8 +22,6 @@ function MainLayout() {
   const [currentTab, setCurrentTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string | string[]>('Tất cả');
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
-  const [clearCart, setClearCart] = useState<() => void>(() => () => undefined);
   const [createdOrder, setCreatedOrder] = useState<OrderRecord | null>(null);
   const { cartItems, clearCart } = useCart();
 
@@ -51,9 +50,7 @@ function MainLayout() {
         selectedCategory={selectedCategory}
         onSelectTab={handleSelectTab}
         onSearch={handleSearch}
-        cartCount={2}
       />
-      <Navbar currentTab={currentTab} onSelectTab={setCurrentTab} />
 
       <main className="flex-grow-1">
         {currentTab === 'home' && (
@@ -84,6 +81,9 @@ function MainLayout() {
             onCancel={() => setCurrentTab('cart')}
             onOrderCreated={(order) => {
               clearCart();
+              if (order.userId) {
+                addNotification(order.userId, 'Đặt hàng thành công', `Đơn ${order.id} đã được ghi nhận.`, 'order');
+              }
               setCreatedOrder(order);
               setCurrentTab('order-success');
             }}

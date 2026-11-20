@@ -14,6 +14,14 @@ import {
     type OrderRecord,
     type OrderStatus,
 } from '../../services/checkoutService';
+import {
+    createReturnRequest,
+    getReturnRequest,
+    getProductReview,
+    saveProductReview,
+    addNotification,
+    type ReturnRequest,
+} from '../../services/customerService';
 
 DataTable.use(DataTablesBootstrap);
 
@@ -52,11 +60,16 @@ function getStatusClass(status: OrderStatus): string {
     return 'bg-primary';
 }
 
+function canCancelOrderStatus(status: OrderStatus): boolean {
+    return status !== 'Giao hàng thành công' && status !== 'Đã hủy';
+}
+
 export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) {
     const { user } = useAuth();
     const { showToast } = useToast();
     const [orders, setOrders] = useState<OrderRecord[]>([]);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+    const [pendingCancelOrder, setPendingCancelOrder] = useState<OrderRecord | null>(null);
     const [statusFilter, setStatusFilter] = useState('');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
@@ -113,15 +126,22 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
         ],
     }), []);
 
-    const handleCancelOrder = (order: OrderRecord) => {
-        if (!user || !window.confirm(`Bạn có chắc muốn hủy đơn ${order.id}? Tồn kho sẽ được hoàn lại.`)) return;
+    const requestCancelOrder = (order: OrderRecord) => {
+        setPendingCancelOrder(order);
+    };
 
+    const confirmCancelOrder = () => {
+        if (!user || !pendingCancelOrder) return;
+        const order = pendingCancelOrder;
         try {
             const cancelled = cancelOrder(order.id, user.id);
             setOrders((current) => current.map((item) => item.id === cancelled.id ? cancelled : item));
+            addNotification(user.id, 'Đơn hàng đã hủy', `Đơn ${cancelled.id} đã được hủy và sản phẩm đã hoàn lại.`, 'order');
             showToast('Đã hủy đơn hàng và hoàn tồn kho.', 'success');
+            setPendingCancelOrder(null);
         } catch (error) {
             showToast(error instanceof Error ? error.message : 'Không thể hủy đơn hàng.', 'danger');
+            setPendingCancelOrder(null);
         }
     };
 
@@ -131,6 +151,7 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
         try {
             const advanced = advanceOrderStatus(order.id, user.id);
             setOrders((current) => current.map((item) => item.id === advanced.id ? advanced : item));
+            addNotification(user.id, 'Cập nhật đơn hàng', `Đơn ${advanced.id} đã chuyển sang ${getOrderStatus(advanced)}.`, 'order');
             showToast(`Đã đẩy trạng thái đơn thành ${getOrderStatus(advanced)}.`, 'success');
         } catch (error) {
             showToast(error instanceof Error ? error.message : 'Không thể đẩy nhanh trạng thái.', 'danger');
@@ -159,7 +180,7 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
                     order={selectedOrder}
                     isDemoMode={isDemoMode}
                     onBack={() => setSelectedOrderId(null)}
-                    onCancel={() => handleCancelOrder(selectedOrder)}
+                    onCancel={() => requestCancelOrder(selectedOrder)}
                     onAdvance={() => handleAdvanceOrder(selectedOrder)}
                 />
             ) : (
@@ -221,15 +242,64 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
                                             <div className="d-flex gap-2 justify-content-end">
                                                 <button type="button" className="btn btn-sm btn-outline-primary"
                                                     onClick={() => setSelectedOrderId(order.id)}>Chi tiết</button>
-                                                {status === 'Chờ xác nhận' && (
+                                                {canCancelOrderStatus(status) && (
                                                     <button type="button" className="btn btn-sm btn-outline-danger"
-                                                        onClick={() => handleCancelOrder(order)}>Hủy đơn</button>
+                                                        onClick={() => requestCancelOrder(order)}>Hủy đơn</button>
                                                 )}
                                             </div>
                                         );
                                     }}
                                 </Column>
                             </DataTable>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {pendingCancelOrder && (
+                <div
+                    className="modal fade show d-block"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="cancel-order-title"
+                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.55)' }}
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) setPendingCancelOrder(null);
+                    }}
+                >
+                    <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '440px' }}>
+                        <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+                            <div className="modal-body text-center p-4 p-md-5">
+                                <div
+                                    className="rounded-circle bg-danger bg-opacity-10 text-danger d-inline-flex align-items-center justify-content-center mb-3"
+                                    style={{ width: '72px', height: '72px' }}
+                                >
+                                    <i className="fa-solid fa-triangle-exclamation fs-2" aria-hidden="true"></i>
+                                </div>
+                                <h4 id="cancel-order-title" className="fw-bold mb-2">Xác nhận hủy đơn</h4>
+                                <p className="text-muted mb-1">
+                                    Bạn có chắc muốn hủy đơn <strong className="text-dark">{pendingCancelOrder.id}</strong>?
+                                </p>
+                                <p className="small text-muted mb-0">
+                                    Các sản phẩm trong đơn sẽ được hoàn lại vào tồn kho.
+                                </p>
+                            </div>
+                            <div className="modal-footer justify-content-center border-0 pt-0 pb-4 px-4 gap-2">
+                                <button
+                                    type="button"
+                                    className="btn btn-light border px-4"
+                                    onClick={() => setPendingCancelOrder(null)}
+                                >
+                                    Không, giữ đơn
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-danger px-4"
+                                    onClick={confirmCancelOrder}
+                                >
+                                    <i className="fa-solid fa-xmark me-2" aria-hidden="true"></i>
+                                    Xác nhận hủy
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -251,8 +321,59 @@ function OrderDetails({
     onCancel: () => void;
     onAdvance: () => void;
 }) {
+    const { user } = useAuth();
+    const { showToast } = useToast();
     const status = getOrderStatus(order);
     const currentStep = ACTIVE_STATUSES.indexOf(status);
+    const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; comment: string }>>(() => {
+        if (!user) return {};
+        return Object.fromEntries(order.items.map((item) => {
+            const review = getProductReview(order.id, item.id, user.id);
+            return [item.id, { rating: review?.rating ?? 0, comment: review?.comment ?? '' }];
+        }));
+    });
+    const [returnRequest, setReturnRequest] = useState<ReturnRequest | null>(() =>
+        user ? getReturnRequest(order.id, user.id) : null
+    );
+    const [returnProductIds, setReturnProductIds] = useState<string[]>([]);
+    const [returnReason, setReturnReason] = useState('');
+    const [returnDetails, setReturnDetails] = useState('');
+
+    const handleSaveReview = (productId: string) => {
+        if (!user) return;
+        const draft = reviewDrafts[productId];
+        try {
+            saveProductReview({
+                orderId: order.id,
+                productId,
+                userId: user.id,
+                rating: draft?.rating ?? 0,
+                comment: draft?.comment ?? '',
+            });
+            showToast('Đã lưu đánh giá sản phẩm.', 'success');
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Không thể lưu đánh giá.', 'danger');
+        }
+    };
+
+    const handleCreateReturn = () => {
+        if (!user) return;
+        const selectedItems = order.items.filter((item) => returnProductIds.includes(item.id));
+        try {
+            const request = createReturnRequest({
+                orderId: order.id,
+                userId: user.id,
+                productIds: selectedItems.map((item) => item.id),
+                productNames: selectedItems.map((item) => item.name),
+                reason: returnReason,
+                details: returnDetails,
+            });
+            setReturnRequest(request);
+            showToast('Đã gửi yêu cầu đổi trả.', 'success');
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Không thể gửi yêu cầu đổi trả.', 'danger');
+        }
+    };
 
     return (
         <div className="card border-0 shadow-sm">
@@ -322,11 +443,125 @@ function OrderDetails({
                     </div>
                 </div>
 
+                {status === 'Giao hàng thành công' && (
+                    <div className="mt-4">
+                        <h5 className="fw-bold">Đánh giá sản phẩm</h5>
+                        <div className="row g-3">
+                            {order.items.map((item, index) => {
+                                const draft = reviewDrafts[item.id] ?? { rating: 0, comment: '' };
+                                return (
+                                    <div className="col-12 col-lg-6" key={`${item.id}-${index}`}>
+                                        <div className="border rounded p-3 h-100">
+                                            <strong>{item.name}</strong>
+                                            <div className="d-flex align-items-center gap-1 my-2" aria-label="Chọn số sao">
+                                                {[1, 2, 3, 4, 5].map((rating) => (
+                                                    <button
+                                                        type="button"
+                                                        key={rating}
+                                                        className="btn btn-link p-0 border-0 text-decoration-none"
+                                                        onClick={() => setReviewDrafts((current) => ({
+                                                            ...current,
+                                                            [item.id]: { ...draft, rating },
+                                                        }))}
+                                                        aria-label={`${rating} sao`}
+                                                    >
+                                                        <i className={`${rating <= draft.rating ? 'fa-solid' : 'fa-regular'} fa-star text-warning fs-4`}></i>
+                                                    </button>
+                                                ))}
+                                                {draft.rating > 0 && <span className="small text-muted ms-1">{draft.rating}/5</span>}
+                                            </div>
+                                            <textarea
+                                                className="form-control"
+                                                rows={3}
+                                                maxLength={500}
+                                                value={draft.comment}
+                                                onChange={(event) => setReviewDrafts((current) => ({
+                                                    ...current,
+                                                    [item.id]: { ...draft, comment: event.target.value },
+                                                }))}
+                                                placeholder="Chia sẻ cảm nhận của bạn..."
+                                            />
+                                            <button type="button" className="btn btn-outline-primary btn-sm mt-2"
+                                                onClick={() => handleSaveReview(item.id)}>
+                                                Lưu đánh giá
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <h5 className="fw-bold mt-4">Yêu cầu đổi trả</h5>
+                        {returnRequest ? (
+                            <div className="alert alert-info mb-0">
+                                <strong>{returnRequest.id}</strong>
+                                {' · '}
+                                {returnRequest.productNames?.length
+                                    ? returnRequest.productNames.join(', ')
+                                    : 'Các sản phẩm trong đơn'}
+                                {' · '}
+                                {returnRequest.reason}
+                                {' · '}
+                                <span className="badge bg-warning text-dark">{returnRequest.status}</span>
+                            </div>
+                        ) : (
+                            <div className="border rounded p-3">
+                                <h6 className="fw-semibold mb-2">Sản phẩm cần đổi trả</h6>
+                                <div className="border rounded p-2 mb-3">
+                                    {order.items.map((item, index) => (
+                                        <div className="form-check py-1" key={`${item.id}-${index}`}>
+                                            <input
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                id={`return-product-${item.id}-${index}`}
+                                                checked={returnProductIds.includes(item.id)}
+                                                onChange={(event) => {
+                                                    setReturnProductIds((current) =>
+                                                        event.target.checked
+                                                            ? [...current, item.id]
+                                                            : current.filter((productId) => productId !== item.id)
+                                                    );
+                                                }}
+                                            />
+                                            <label className="form-check-label" htmlFor={`return-product-${item.id}-${index}`}>
+                                                {item.name}
+                                                <span className="text-muted ms-2">x{item.quantity}</span>
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="row g-3">
+                                    <div className="col-12 col-md-4">
+                                        <label className="form-label" htmlFor="return-reason">Lý do</label>
+                                        <select id="return-reason" className="form-select" value={returnReason}
+                                            onChange={(event) => setReturnReason(event.target.value)}>
+                                            <option value="">Chọn lý do</option>
+                                            <option value="Sai sản phẩm">Sai sản phẩm</option>
+                                            <option value="Sản phẩm lỗi">Sản phẩm lỗi</option>
+                                            <option value="Không còn nhu cầu">Không còn nhu cầu</option>
+                                            <option value="Khác">Khác</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-12 col-md-8">
+                                        <label className="form-label" htmlFor="return-details">Chi tiết</label>
+                                        <textarea id="return-details" className="form-control" rows={2} maxLength={500}
+                                            value={returnDetails} onChange={(event) => setReturnDetails(event.target.value)}
+                                            placeholder="Mô tả tình trạng sản phẩm..." />
+                                    </div>
+                                </div>
+                                <button type="button" className="btn btn-outline-warning mt-3" onClick={handleCreateReturn}>
+                                    Gửi yêu cầu đổi trả
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div className="d-flex flex-wrap gap-2 mt-4">
                     <button type="button" className="btn btn-outline-secondary" onClick={onBack}>
                         <i className="fa-solid fa-arrow-left me-2" aria-hidden="true"></i>Quay lại lịch sử
                     </button>
-                    {status === 'Chờ xác nhận' && (
+                    {canCancelOrderStatus(status) && (
                         <button type="button" className="btn btn-outline-danger" onClick={onCancel}>Hủy đơn hàng</button>
                     )}
                     {isDemoMode && status !== 'Giao hàng thành công' && status !== 'Đã hủy' && (
