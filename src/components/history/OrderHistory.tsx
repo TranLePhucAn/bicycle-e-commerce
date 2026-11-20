@@ -9,10 +9,7 @@ import { useToast } from '../../context/ToastContext';
 import { useCart } from '../../context/CartContext';
 import { apiRequest } from '../../services/apiClient';
 import {
-    advanceOrderStatus,
-    cancelOrder,
     getOrderStatus,
-    getOrdersForUser,
     type OrderRecord,
     type OrderStatus,
 } from '../../services/checkoutService';
@@ -82,18 +79,15 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
 
     useEffect(() => {
         if (!user) return;
-
-        const refreshOrders = () => {
-            try {
-                setOrders(getOrdersForUser(user.id));
-            } catch (error) {
-                showToast(error instanceof Error ? error.message : 'Không thể tải lịch sử đơn hàng.', 'danger');
-            }
-        };
-
-        refreshOrders();
-        const intervalId = window.setInterval(refreshOrders, 15000);
-        return () => window.clearInterval(intervalId);
+        let isActive = true;
+        apiRequest<{ orders: OrderRecord[] }>('/api/orders/me')
+            .then(({ orders: serverOrders }) => {
+                if (isActive) setOrders(serverOrders);
+            })
+            .catch((error: Error) => {
+                if (isActive) showToast(error.message || 'Không thể tải lịch sử đơn hàng.', 'danger');
+            });
+        return () => { isActive = false; };
     }, [showToast, user]);
 
     const filteredOrders = useMemo(
@@ -135,11 +129,14 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
         setPendingCancelOrder(order);
     };
 
-    const confirmCancelOrder = () => {
+    const confirmCancelOrder = async () => {
         if (!user || !pendingCancelOrder) return;
         const order = pendingCancelOrder;
         try {
-            const cancelled = cancelOrder(order.id, user.id);
+            const { order: cancelled } = await apiRequest<{ order: OrderRecord }>(
+                `/api/orders/${encodeURIComponent(order.id)}/cancel`,
+                { method: 'POST' },
+            );
             setOrders((current) => current.map((item) => item.id === cancelled.id ? cancelled : item));
             addNotification(user.id, 'Đơn hàng đã hủy', `Đơn ${cancelled.id} đã được hủy và sản phẩm đã hoàn lại.`, 'order');
             showToast('Đã hủy đơn hàng và hoàn tồn kho.', 'success');
@@ -150,11 +147,14 @@ export default function OrderHistory({ onContinueShopping }: OrderHistoryProps) 
         }
     };
 
-    const handleAdvanceOrder = (order: OrderRecord) => {
+    const handleAdvanceOrder = async (order: OrderRecord) => {
         if (!user) return;
 
         try {
-            const advanced = advanceOrderStatus(order.id, user.id);
+            const { order: advanced } = await apiRequest<{ order: OrderRecord }>(
+                `/api/orders/${encodeURIComponent(order.id)}/advance`,
+                { method: 'POST' },
+            );
             setOrders((current) => current.map((item) => item.id === advanced.id ? advanced : item));
             addNotification(user.id, 'Cập nhật đơn hàng', `Đơn ${advanced.id} đã chuyển sang ${getOrderStatus(advanced)}.`, 'order');
             showToast(`Đã đẩy trạng thái đơn thành ${getOrderStatus(advanced)}.`, 'success');
