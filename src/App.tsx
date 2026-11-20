@@ -15,67 +15,100 @@ import NotFound from './components/common/NotFound';
 import LoginModal from './components/auth/LoginModal';
 import Checkout from './components/checkout/Checkout';
 import OrderSuccess from './components/checkout/OrderSuccess';
-import type { CheckoutItem, OrderRecord } from './services/checkoutService';
-import AboutPage from './components/about/AboutPage.tsx';
-import BikeDetail from './components/home/BikeDetail';
-import AccountPage from './components/account/AccountPage';
-import WishlistPage from './components/wishlist/WishlistPage';
+import type { OrderRecord } from './services/checkoutService';
+import { addNotification } from './services/customerService';
 
 const OrderHistory = lazy(() => import('./components/history/OrderHistory'));
 
 function MainLayout() {
-    const [currentTab, setCurrentTab] = useState('home');
-    const [selectedCategory, setSelectedCategory] = useState<string | string[]>('Tất cả');
-    const [searchKeyword, setSearchKeyword] = useState('');
-    const [selectedBike, setSelectedBike] = useState<any>(null);
-    const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
-    const [createdOrder, setCreatedOrder] = useState<OrderRecord | null>(null);
-    const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
-    const { cartItems, addToCart, refreshCart } = useCart();
+  const [currentTab, setCurrentTab] = useState('home');
+  const [selectedCategory, setSelectedCategory] = useState<string | string[]>('Tất cả');
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [createdOrder, setCreatedOrder] = useState<OrderRecord | null>(null);
+  const { cartItems, clearCart } = useCart();
 
-    const handleSelectTab = (tabOrCategory: string | string[]) => {
-        setSearchKeyword('');
-        setSelectedBike(null);
+  const handleSelectTab = (tabOrCategory: string | string[]) => {
+    setSearchKeyword('');
+    if (typeof tabOrCategory === 'string' && ['home', 'cart', 'history', 'not-found'].includes(tabOrCategory)) {
+      setCurrentTab(tabOrCategory);
+      if (tabOrCategory === 'home') setSelectedCategory('Tất cả');
+      return;
+    }
 
-        if (typeof tabOrCategory === 'string' && ['home', 'cart', 'wishlist', 'history', 'about', 'account', 'not-found'].includes(tabOrCategory)) {
-            setCurrentTab(tabOrCategory);
-            if (tabOrCategory === 'home') setSelectedCategory('Tất cả');
-            return;
-        }
+    setCurrentTab('home');
+    setSelectedCategory(tabOrCategory);
+  };
 
-        setCurrentTab('home');
-        setSelectedCategory(tabOrCategory);
-    };
+  const handleSearch = (keyword: string) => {
+    setCurrentTab('home');
+    setSelectedCategory('Tất cả');
+    setSearchKeyword(keyword);
+  };
 
-    const handleSearch = (keyword: string) => {
-        setCurrentTab('home');
-        setSelectedCategory('Tất cả');
-        setSearchKeyword(keyword);
-        setSelectedBike(null);
-    };
+  return (
+    <div className="d-flex flex-column min-vh-100 bg-light">
+      <Navbar
+        currentTab={currentTab}
+        selectedCategory={selectedCategory}
+        onSelectTab={handleSelectTab}
+        onSearch={handleSearch}
+      />
 
-    return (
-        <div className="d-flex flex-column min-vh-100 bg-light">
-            <Navbar
-                currentTab={currentTab}
-                selectedCategory={selectedCategory}
-                onSelectTab={handleSelectTab}
-                onSearch={handleSearch}
-                onOpenCartDrawer={() => setIsCartDrawerOpen(true)}
+      <main className="flex-grow-1">
+        {currentTab === 'home' && (
+          <>
+            {selectedCategory === 'Tất cả' && !searchKeyword && (
+              <div className="app-container">
+                <Hero />
+              </div>
+            )}
+            <BiketList
+              selectedCategory={selectedCategory}
+              searchKeyword={searchKeyword}
+              onSelectTab={handleSelectTab}
             />
 
-            <CartDrawer
-                isOpen={isCartDrawerOpen}
-                onClose={() => setIsCartDrawerOpen(false)}
-                onViewCart={() => {
-                    setIsCartDrawerOpen(false);
-                    setCurrentTab('cart');
-                }}
-                onCheckout={() => {
-                    setIsCartDrawerOpen(false);
-                    setCheckoutItems(cartItems);
-                    setCurrentTab('checkout');
-                }}
+        {currentTab === 'checkout' && (
+          <Checkout
+            items={cartItems}
+            onCancel={() => setCurrentTab('cart')}
+            onOrderCreated={(order) => {
+              clearCart();
+              if (order.userId) {
+                addNotification(order.userId, 'Đặt hàng thành công', `Đơn ${order.id} đã được ghi nhận.`, 'order');
+              }
+              setCreatedOrder(order);
+              setCurrentTab('order-success');
+            }}
+          />
+        )}
+
+        {currentTab === 'order-success' && createdOrder && (
+          <OrderSuccess
+            order={createdOrder}
+            onContinueShopping={() => setCurrentTab('home')}
+          />
+        )}
+
+        {currentTab === 'history' && (
+          <ProtectedRoute
+            onRedirectHome={() => setCurrentTab('home')}
+            routeName="Lịch sử đơn hàng"
+          >
+            <Suspense fallback={<div className="container py-5 text-center" role="status">Đang tải lịch sử đơn hàng...</div>}>
+              <OrderHistory onContinueShopping={() => setCurrentTab('home')} />
+            </Suspense>
+          </ProtectedRoute>
+        )}
+
+        {        currentTab !== 'home' &&
+        currentTab !== 'cart' &&
+        currentTab !== 'history' &&
+        currentTab !== 'checkout' &&
+          currentTab !== 'order-success' && (
+            <NotFound
+              onGoHome={() => setCurrentTab('home')}
+              onGoCart={() => setCurrentTab('cart')}
             />
 
             <main className="flex-grow-1">

@@ -70,8 +70,8 @@ export function getOrderStatus(order: OrderRecord, now = Date.now()): OrderStatu
     if (!Number.isFinite(createdAt)) return 'Chờ xác nhận';
 
     const elapsed = Math.max(0, now - createdAt);
-    if (elapsed >= 24 * 60 * 60 * 1000) return 'Giao hàng thành công';
-    if (elapsed >= 60 * 60 * 1000) return 'Đang vận chuyển';
+    if (elapsed >= 3 * 60 * 1000) return 'Giao hàng thành công';
+    if (elapsed >= 2 * 60 * 1000) return 'Đang vận chuyển';
     if (elapsed >= 60 * 1000) return 'Đang chuẩn bị';
     return 'Chờ xác nhận';
 }
@@ -115,8 +115,9 @@ export function cancelOrder(orderId: string, userId: string): OrderRecord {
     if (orderIndex < 0) throw new Error('Không tìm thấy đơn hàng.');
 
     const order = orders[orderIndex];
-    if (getOrderStatus(order) !== 'Chờ xác nhận') {
-        throw new Error('Chỉ có thể hủy đơn hàng đang chờ xác nhận.');
+    const status = getOrderStatus(order);
+    if (status === 'Giao hàng thành công' || status === 'Đã hủy') {
+        throw new Error('Không thể hủy đơn hàng đã giao thành công hoặc đã hủy.');
     }
 
     const stock = readStorage<Record<string, number>>(STOCK_STORAGE_KEY, {});
