@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
+import { useWishlist } from '../../context/WishlistContext';
+import { loadBikes } from '../../services/bikeService';
 import '../../styles/bikedetail.css';
 
 interface ReviewItem {
@@ -12,16 +14,20 @@ interface ReviewItem {
     date: string;
 }
 
-export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
+export default function BikeDetail({ bike, onSelectTab, onAddToCart, onSelectBike }: {
     bike: any;
     onSelectTab?: (category: string) => void;
     onAddToCart?: (bike: any, quantity: number) => Promise<boolean> | boolean;
+    onSelectBike?: (bike: any) => void;
 }) {
     const { showToast } = useToast();
     const { user, openLoginModal } = useAuth() as any;
+    const { isInWishlist, toggleWishlist } = useWishlist();
 
     const [quantity, setQuantity] = useState<number>(1);
     const [activeTab, setActiveTab] = useState<'description' | 'warranty' | 'reviews'>('description');
+    const [relatedBikes, setRelatedBikes] = useState<any[]>([]);
+    const relatedSliderRef = useRef<HTMLDivElement>(null);
 
     const [reviews, setReviews] = useState<ReviewItem[]>([
         {
@@ -69,7 +75,44 @@ export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
         setActiveTab('description');
         setSelectedSize(availableSizes[0] || '');
         setSelectedColor(availableColors[0] || '');
+        if (relatedSliderRef.current) {
+            relatedSliderRef.current.scrollTo({ left: 0 });
+        }
     }, [bike?.id]);
+
+    useEffect(() => {
+        if (!bike?.id) return;
+        let isActive = true;
+
+        loadBikes()
+            .then((allBikes) => {
+                if (!isActive) return;
+                const currentCategories = Array.isArray(bike.category) ? bike.category : [bike.category];
+
+                // Ưu tiên sản phẩm cùng loại (category)
+                const sameCategory = allBikes.filter((item: any) => {
+                    if (String(item.id) === String(bike.id)) return false;
+                    const itemCats = Array.isArray(item.category) ? item.category : [item.category];
+                    return itemCats.some((cat: string) => currentCategories.includes(cat));
+                });
+
+                // Bổ sung các sản phẩm khác phía sau để danh sách luôn đủ để trượt
+                const otherBikes = allBikes.filter(
+                    (item: any) =>
+                        String(item.id) !== String(bike.id) &&
+                        !sameCategory.some((sc: any) => String(sc.id) === String(item.id))
+                );
+
+                setRelatedBikes([...sameCategory, ...otherBikes].slice(0, 12));
+            })
+            .catch(() => {
+                if (isActive) setRelatedBikes([]);
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, [bike?.id, bike?.category]);
 
     const maxStock = bike?.stock ?? 0;
 
@@ -140,6 +183,30 @@ export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
         showToast('Cảm ơn bạn đã gửi đánh giá sản phẩm!', 'success');
     };
 
+    const handleSlideRelated = (direction: 'left' | 'right') => {
+        const container = relatedSliderRef.current;
+        if (!container) return;
+        const scrollStep = container.clientWidth * 0.8;
+        container.scrollBy({
+            left: direction === 'left' ? -scrollStep : scrollStep,
+            behavior: 'smooth',
+        });
+    };
+
+    const handleRelatedQuickAdd = async (relBike: any) => {
+        const added = await onAddToCart?.(
+            {
+                ...relBike,
+                originalBikeId: relBike.id,
+                image: getImageSrc(relBike.image),
+            },
+            1
+        );
+        if (added !== false) {
+            showToast(`Đã thêm "${relBike.name}" vào giỏ hàng!`, 'success');
+        }
+    };
+
     const categoryText = Array.isArray(bike.category) ? bike.category.join(', ') : (bike.category || 'Xe đạp');
 
     const specGroups: Record<string, Record<string, string>> = (() => {
@@ -154,6 +221,34 @@ export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
 
     return (
         <section className="container py-3">
+            <style>{`
+                .related-slider-track {
+                    display: flex;
+                    gap: 12px;
+                    overflow-x: auto;
+                    scroll-snap-type: x mandatory;
+                    scrollbar-width: none;
+                    -ms-overflow-style: none;
+                }
+                .related-slider-track::-webkit-scrollbar {
+                    display: none;
+                }
+                .related-slide-card {
+                    flex: 0 0 calc((100% - 12px) / 2);
+                    max-width: calc((100% - 12px) / 2);
+                    scroll-snap-align: start;
+                }
+                @media (min-width: 768px) {
+                    .related-slider-track {
+                        gap: 16px;
+                    }
+                    .related-slide-card {
+                        flex: 0 0 calc((100% - 64px) / 5);
+                        max-width: calc((100% - 64px) / 5);
+                    }
+                }
+            `}</style>
+
             <nav aria-label="breadcrumb" className="mb-3">
                 <ol className="breadcrumb mb-0">
                     <li className="breadcrumb-item">
@@ -186,7 +281,7 @@ export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
                 </ol>
             </nav>
 
-            <div className="border-0 p-2 p-md-4 mb-4">
+            <div className="border-0 mb-4">
                 <div className="row g-4 align-items-start">
                     <div className="col-12 col-md-5 text-center">
                         <div className="p-4 bg-light rounded-4 d-flex align-items-center justify-content-center mb-3" style={{ minHeight: '320px' }}>
@@ -543,6 +638,129 @@ export default function BikeDetail({ bike, onSelectTab, onAddToCart }: {
                     </div>
                 </div>
             </div>
+
+            {relatedBikes.length > 0 && (
+                <div className="mt-5 pt-4 border-top">
+                    <h4 className="fw-bold text-dark mb-4 border-start border-4 border-dark ps-3">
+                        SẢN PHẨM LIÊN QUAN
+                    </h4>
+
+                    <div className="d-flex align-items-center gap-2 gap-md-3">
+                        <button
+                            type="button"
+                            className="btn btn-outline-dark rounded-circle d-none d-md-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
+                            style={{ width: '40px', height: '40px' }}
+                            onClick={() => handleSlideRelated('left')}
+                            title="Sản phẩm trước"
+                            aria-label="Sản phẩm trước"
+                        >
+                            <i className="fa-solid fa-chevron-left"></i>
+                        </button>
+
+                        <div ref={relatedSliderRef} className="related-slider-track flex-grow-1 py-1">
+                            {relatedBikes.map((item) => {
+                                const liked = isInWishlist(item.id);
+                                return (
+                                    <div key={item.id} className="related-slide-card">
+                                        <div className="card product-card h-100 rounded-3 overflow-hidden bg-white shadow-sm position-relative">
+                                            {item.discount && (
+                                                <span className="position-absolute top-0 start-0 badge bg-danger m-2 z-1">
+                                                    {item.discount}
+                                                </span>
+                                            )}
+
+                                            <div
+                                                className="d-flex align-items-center justify-content-center bg-light p-2"
+                                                style={{ height: '150px', cursor: onSelectBike ? 'pointer' : 'default' }}
+                                                onClick={() => {
+                                                    if (onSelectBike) {
+                                                        onSelectBike(item);
+                                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                    }
+                                                }}
+                                            >
+                                                <img
+                                                    src={getImageSrc(item.image)}
+                                                    alt={item.name}
+                                                    className="w-100 h-100 object-fit-contain"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).src =
+                                                            'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=300&q=80';
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div className="card-body d-flex flex-column p-2 p-md-3">
+                                                <div className="d-flex justify-content-between align-items-center mb-1 gap-1">
+                                                    <small className="text-muted text-truncate" style={{ fontSize: '11px' }}>
+                                                        {item.category}
+                                                    </small>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm p-0 border-0 bg-transparent flex-shrink-0"
+                                                        title={liked ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
+                                                        onClick={() => toggleWishlist(item)}
+                                                    >
+                                                        <i className={`${liked ? 'fa-solid text-danger' : 'fa-regular text-secondary'} fa-heart`}></i>
+                                                    </button>
+                                                </div>
+
+                                                <h6
+                                                    className="card-title fw-bold text-dark text-truncate mb-2"
+                                                    style={{ fontSize: '14px', cursor: onSelectBike ? 'pointer' : 'default' }}
+                                                    title={item.name}
+                                                    onClick={() => {
+                                                        if (onSelectBike) {
+                                                            onSelectBike(item);
+                                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                        }
+                                                    }}
+                                                >
+                                                    {item.name}
+                                                </h6>
+
+                                                <div className="mt-auto">
+                                                    <div className="mb-2" style={{ minHeight: '38px' }}>
+                                                        <div className="text-danger fw-bold lh-1" style={{ fontSize: '15px' }}>
+                                                            {item.price?.toLocaleString('vi-VN')} đ
+                                                        </div>
+                                                        {item.originalPrice && (
+                                                            <div className="text-muted text-decoration-line-through mt-1" style={{ fontSize: '11px' }}>
+                                                                {item.originalPrice?.toLocaleString('vi-VN')} đ
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        className={`btn w-100 btn-sm py-2 fw-semibold ${item.stock === 0 ? 'btn-secondary disabled' : 'btn-dark'}`}
+                                                        onClick={() => handleRelatedQuickAdd(item)}
+                                                        disabled={item.stock === 0}
+                                                    >
+                                                        <i className="fa-solid fa-cart-plus me-1"></i>
+                                                        {item.stock === 0 ? 'Tạm hết hàng' : 'Thêm vào giỏ'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <button
+                            type="button"
+                            className="btn btn-outline-dark rounded-circle d-none d-md-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
+                            style={{ width: '40px', height: '40px' }}
+                            onClick={() => handleSlideRelated('right')}
+                            title="Sản phẩm tiếp theo"
+                            aria-label="Sản phẩm tiếp theo"
+                        >
+                            <i className="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            )}
         </section>
     );
 }
