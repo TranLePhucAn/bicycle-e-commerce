@@ -3,11 +3,13 @@ import './App.css';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Hero from './components/layout/Hero';
 import BiketList from './components/home/BikeList.tsx';
 import Cart from './components/cart/Cart';
+import CartDrawer from './components/cart/CartDrawer';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import NotFound from './components/common/NotFound';
 import LoginModal from './components/auth/LoginModal';
@@ -65,15 +67,6 @@ function MainLayout() {
               searchKeyword={searchKeyword}
               onSelectTab={handleSelectTab}
             />
-          </>
-        )}
-
-        <div style={{ display: currentTab === 'cart' ? 'block' : 'none' }}>
-          <Cart
-            onContinueShopping={() => setCurrentTab('home')}
-            onCheckout={() => setCurrentTab('checkout')}
-          />
-        </div>
 
         {currentTab === 'checkout' && (
           <Checkout
@@ -117,23 +110,151 @@ function MainLayout() {
               onGoHome={() => setCurrentTab('home')}
               onGoCart={() => setCurrentTab('cart')}
             />
-          )}
-      </main>
 
-      <LoginModal />
-      <Footer />
-    </div>
-  );
+            <main className="flex-grow-1">
+                {currentTab === 'home' && (
+                    <>
+                        {selectedBike ? (
+                            <BikeDetail
+                                bike={selectedBike}
+                                onSelectTab={handleSelectTab}
+                                onAddToCart={(bike, qty) => {
+                                    const res = addToCart(bike, qty);
+                                    setIsCartDrawerOpen(true);
+                                    return res;
+                                }}
+                            />
+                        ) : (
+                            <>
+                                {selectedCategory === 'Tất cả' && !searchKeyword && (
+                                    <div className="app-container">
+                                        <Hero />
+                                    </div>
+                                )}
+                                <BiketList
+                                    selectedCategory={selectedCategory}
+                                    searchKeyword={searchKeyword}
+                                    onSelectTab={handleSelectTab}
+                                    onSelectBike={(bike: any) => {
+                                        setSelectedBike(bike);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                />
+                            </>
+                        )}
+                    </>
+                )}
+
+                <div style={{ display: currentTab === 'cart' ? 'block' : 'none' }}>
+                    <Cart
+                        onContinueShopping={() => setCurrentTab('home')}
+                        onCheckout={(items) => {
+                            setCheckoutItems(items);
+                            setCurrentTab('checkout');
+                        }}
+                    />
+                </div>
+
+                {currentTab === 'wishlist' && (
+                    <ProtectedRoute
+                        onRedirectHome={() => setCurrentTab('home')}
+                        routeName="Sản phẩm yêu thích"
+                    >
+                        <WishlistPage
+                            onContinueShopping={() => setCurrentTab('home')}
+                            onSelectBike={(bike) => {
+                                setSelectedBike(bike);
+                                setCurrentTab('home');
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            onMoveToCart={(bikeItem) => {
+                                const res = addToCart(bikeItem, 1);
+                                setIsCartDrawerOpen(true);
+                                return res;
+                            }}
+                        />
+                    </ProtectedRoute>
+                )}
+
+                {currentTab === 'checkout' && (
+                    <Checkout
+                        items={checkoutItems}
+                        onCancel={() => setCurrentTab('cart')}
+                        onOrderCreated={(order) => {
+                            if (refreshCart) {
+                                refreshCart().catch((error) => console.error('Không thể tải lại giỏ hàng:', error));
+                            }
+                            setCreatedOrder(order);
+                            setCurrentTab('order-success');
+                        }}
+                    />
+                )}
+
+                {currentTab === 'order-success' && createdOrder && (
+                    <OrderSuccess
+                        order={createdOrder}
+                        onContinueShopping={() => setCurrentTab('home')}
+                    />
+                )}
+
+                {currentTab === 'account' && (
+                    <ProtectedRoute
+                        onRedirectHome={() => setCurrentTab('home')}
+                        routeName="Quản lý tài khoản"
+                    >
+                        <AccountPage onGoHome={() => handleSelectTab('home')} />
+                    </ProtectedRoute>
+                )}
+
+                {currentTab === 'history' && (
+                    <ProtectedRoute
+                        onRedirectHome={() => setCurrentTab('home')}
+                        routeName="Lịch sử đơn hàng"
+                    >
+                        <Suspense fallback={<div className="container py-5 text-center" role="status">Đang tải lịch sử đơn hàng...</div>}>
+                            <OrderHistory
+                                onContinueShopping={() => setCurrentTab('home')}
+                                onViewCart={() => setCurrentTab('cart')}
+                            />
+                        </Suspense>
+                    </ProtectedRoute>
+                )}
+
+                {currentTab === 'about' && (
+                    <AboutPage onGoHome={() => handleSelectTab('home')} />
+                )}
+
+                {currentTab !== 'home' &&
+                    currentTab !== 'cart' &&
+                    currentTab !== 'wishlist' &&
+                    currentTab !== 'history' &&
+                    currentTab !== 'account' &&
+                    currentTab !== 'checkout' &&
+                    currentTab !== 'about' &&
+                    currentTab !== 'order-success' && (
+                        <NotFound
+                            onGoHome={() => setCurrentTab('home')}
+                            onGoCart={() => setCurrentTab('cart')}
+                        />
+                    )}
+            </main>
+
+            <LoginModal />
+            <Footer />
+        </div>
+    );
 }
 
 export default function App() {
-  return (
-    <ToastProvider>
-      <AuthProvider>
-          <CartProvider>
-            <MainLayout />
-          </CartProvider>
-      </AuthProvider>
-    </ToastProvider>
-  );
+    return (
+        <ToastProvider>
+            <AuthProvider>
+                <WishlistProvider>
+                    <CartProvider>
+                        <MainLayout />
+                    </CartProvider>
+                </WishlistProvider>
+            </AuthProvider>
+        </ToastProvider>
+    );
 }

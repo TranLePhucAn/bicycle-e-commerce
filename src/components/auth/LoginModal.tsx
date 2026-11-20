@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, type AuthModalMode } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { apiRequest } from '../../services/apiClient';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -13,13 +14,12 @@ export default function LoginModal() {
         login,
         quickLogin,
         register,
-        isEmailTaken,
     } = useAuth();
     const { showToast } = useToast();
 
     // State cho Đăng Nhập
-    const [loginEmail, setLoginEmail] = useState('an.tran@example.com');
-    const [loginPassword, setLoginPassword] = useState('password123');
+    const [loginEmail, setLoginEmail] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
     const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string }>({});
 
     // State cho Đăng Ký
@@ -37,6 +37,12 @@ export default function LoginModal() {
     // Hiển thị/Ẩn mật khẩu
     const [showLoginPassword, setShowLoginPassword] = useState(false);
     const [showRegPassword, setShowRegPassword] = useState(false);
+    const [showForgotPassword, setShowForgotPassword] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetCode, setResetCode] = useState('');
+    const [resetPassword, setResetPassword] = useState('');
+    const [issuedResetCode, setIssuedResetCode] = useState('');
+    const [resetStep, setResetStep] = useState<'email' | 'code'>('email');
 
     // Reset lỗi khi chuyển tab hoặc mở modal
     useEffect(() => {
@@ -86,8 +92,6 @@ export default function LoginModal() {
             errors.email = 'Vui lòng nhập địa chỉ Email.';
         } else if (!EMAIL_REGEX.test(email)) {
             errors.email = 'Định dạng email không hợp lệ (ví dụ: name@example.com).';
-        } else if (isEmailTaken(email)) {
-            errors.email = 'Email này đã tồn tại trong hệ thống! Vui lòng chọn email khác.';
         }
 
         if (!regPassword) {
@@ -107,14 +111,14 @@ export default function LoginModal() {
     };
 
     // Xử lý nộp form Đăng Nhập
-    const handleLoginSubmit = (e: React.FormEvent) => {
+    const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateLoginForm()) {
             showToast('Vui lòng kiểm tra lại thông tin đăng nhập!', 'warning');
             return;
         }
 
-        const res = login(loginEmail, loginPassword);
+        const res = await login(loginEmail, loginPassword);
         if (res.success) {
             showToast(res.message, 'success');
         } else {
@@ -124,14 +128,14 @@ export default function LoginModal() {
     };
 
     // Xử lý nộp form Đăng Ký
-    const handleRegisterSubmit = (e: React.FormEvent) => {
+    const handleRegisterSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateRegisterForm()) {
             showToast('Vui lòng hoàn thiện đúng các trường thông tin!', 'warning');
             return;
         }
 
-        const res = register({
+        const res = await register({
             name: regName,
             email: regEmail,
             password: regPassword,
@@ -151,10 +155,52 @@ export default function LoginModal() {
     };
 
     // Xử lý Đăng Nhập Nhanh (Demo)
-    const handleQuickLogin = () => {
-        const res = quickLogin();
+    const handleQuickLogin = async () => {
+        const res = await quickLogin();
         if (res.success) {
             showToast(res.message, 'success');
+        }
+    };
+
+    const handleRequestReset = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!EMAIL_REGEX.test(resetEmail.trim())) {
+            showToast('Vui lòng nhập email hợp lệ.', 'warning');
+            return;
+        }
+        try {
+            const result = await apiRequest<{ demoCode: string }>('/api/auth/forgot-password', {
+                method: 'POST',
+                body: JSON.stringify({ email: resetEmail.trim() }),
+            });
+            setIssuedResetCode(result.demoCode);
+            setResetStep('code');
+            showToast('Mã xác nhận mô phỏng đã được tạo.', 'success');
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Không thể tạo mã xác nhận.', 'danger');
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (resetPassword.length < 6) {
+            showToast('Mật khẩu mới cần ít nhất 6 ký tự.', 'warning');
+            return;
+        }
+        try {
+            const result = await apiRequest<{ message: string }>('/api/auth/reset-password', {
+                method: 'POST',
+                body: JSON.stringify({ email: resetEmail.trim(), code: resetCode, newPassword: resetPassword }),
+            });
+            showToast(result.message, 'success');
+            setShowForgotPassword(false);
+            setResetStep('email');
+            setResetEmail('');
+            setResetCode('');
+            setResetPassword('');
+            setLoginEmail(resetEmail.trim());
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Không thể đặt lại mật khẩu.', 'danger');
         }
     };
 
@@ -224,6 +270,33 @@ export default function LoginModal() {
                     </div>
 
                     <div className="modal-body p-4 bg-white">
+                        {showForgotPassword ? (
+                            <div>
+                                <h6 className="fw-bold mb-2">Quên mật khẩu</h6>
+                                <p className="small text-muted">Nhập email tài khoản để nhận mã xác nhận mô phỏng.</p>
+                                {resetStep === 'email' ? (
+                                    <form onSubmit={handleRequestReset}>
+                                        <label className="form-label small fw-semibold" htmlFor="reset-email">Email</label>
+                                        <input id="reset-email" type="email" className="form-control mb-3" value={resetEmail}
+                                            onChange={(e) => setResetEmail(e.target.value)} required />
+                                        <button className="btn btn-primary w-100" type="submit">Tạo mã xác nhận</button>
+                                    </form>
+                                ) : (
+                                    <form onSubmit={handleResetPassword}>
+                                        <div className="alert alert-info small">Mã demo: <strong>{issuedResetCode}</strong> (có hiệu lực 10 phút)</div>
+                                        <label className="form-label small fw-semibold" htmlFor="reset-code">Mã xác nhận</label>
+                                        <input id="reset-code" className="form-control mb-3" inputMode="numeric" maxLength={6}
+                                            value={resetCode} onChange={(e) => setResetCode(e.target.value)} required />
+                                        <label className="form-label small fw-semibold" htmlFor="reset-password">Mật khẩu mới</label>
+                                        <input id="reset-password" type="password" className="form-control mb-3" minLength={6}
+                                            value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} required />
+                                        <button className="btn btn-primary w-100" type="submit">Đặt lại mật khẩu</button>
+                                    </form>
+                                )}
+                                <button type="button" className="btn btn-link px-0 mt-2 text-decoration-none"
+                                    onClick={() => { setShowForgotPassword(false); setResetStep('email'); }}>Quay lại đăng nhập</button>
+                            </div>
+                        ) : <>
                         {/* ===================== FORM ĐĂNG NHẬP ===================== */}
                         {authModalMode === 'login' && (
                             <form onSubmit={handleLoginSubmit} noValidate>
@@ -301,6 +374,13 @@ export default function LoginModal() {
                                     Đăng Nhập
                                 </button>
 
+                                <div className="text-end mb-2">
+                                    <button type="button" className="btn btn-link p-0 small text-decoration-none"
+                                        onClick={() => { setResetEmail(loginEmail); setShowForgotPassword(true); }}>
+                                        Quên mật khẩu?
+                                    </button>
+                                </div>
+
                                 <button
                                     type="button"
                                     className="btn btn-outline-success w-100 py-2 fw-semibold rounded-3 mb-3"
@@ -374,15 +454,6 @@ export default function LoginModal() {
                                             }`}
                                             placeholder="name@example.com"
                                             value={regEmail}
-                                            onBlur={() => {
-                                                const email = regEmail.trim();
-                                                if (email && EMAIL_REGEX.test(email) && isEmailTaken(email)) {
-                                                    setRegErrors((prev) => ({
-                                                        ...prev,
-                                                        email: 'Email này đã tồn tại trong hệ thống!',
-                                                    }));
-                                                }
-                                            }}
                                             onChange={(e) => {
                                                 setRegEmail(e.target.value);
                                                 if (regErrors.email) {
@@ -487,6 +558,7 @@ export default function LoginModal() {
                                 </div>
                             </form>
                         )}
+                        </>}
                     </div>
                 </div>
             </div>

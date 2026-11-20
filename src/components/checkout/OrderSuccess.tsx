@@ -1,4 +1,4 @@
-import { getOrderStatus, type OrderRecord } from '../../services/checkoutService';
+import type { OrderRecord } from '../../services/checkoutService';
 
 interface OrderSuccessProps {
     order: OrderRecord;
@@ -16,7 +16,7 @@ export default function OrderSuccess({ order, onContinueShopping }: OrderSuccess
                         </div>
                         <h2 className="fw-bold">Đặt hàng thành công!</h2>
                         <p className="text-muted">Mã đơn: {order.id}</p>
-                        <p>Trạng thái hiện tại: <strong>{getOrderStatus(order)}</strong></p>
+                        <p>Trạng thái hiện tại: <strong>{order.status}</strong></p>
                         <p className="fw-bold text-danger">{order.total.toLocaleString('vi-VN')} đ</p>
                         <button type="button" className="btn btn-primary align-self-center" onClick={onContinueShopping}>
                             Tiếp tục mua sắm

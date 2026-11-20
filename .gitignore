@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+server/data/store.json
+server/data/store.json.tmp
 
 # Editor directories and files
 .vscode/*

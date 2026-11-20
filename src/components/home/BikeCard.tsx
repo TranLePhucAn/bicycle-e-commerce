@@ -1,13 +1,17 @@
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
+import { useWishlist } from '../../context/WishlistContext';
 
 export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailClick?: (bike: any) => void }) {
     const { addToCart } = useCart();
     const { showToast } = useToast();
+    const { isInWishlist, toggleWishlist } = useWishlist();
 
-    const handleAddToCart = () => {
-        addToCart(bike);
-        showToast(`Đã thêm "${bike.name}" vào giỏ hàng!`, 'success');
+    const liked = isInWishlist(bike.id);
+
+    const handleAddToCart = async () => {
+        const added = await addToCart(bike);
+        if (added) showToast(`Đã thêm "${bike.name}" vào giỏ hàng!`, 'success');
     };
 
     const getStatusBadgeClass = (status: any) => {
@@ -21,6 +25,13 @@ export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailC
             default:
                 return 'bg-dark';
         }
+    };
+
+    const getImageSrc = (imagePath: string | undefined) => {
+        if (!imagePath) return '/src/assets/images/bike01.png';
+        if (/^(https?:|data:|blob:|\/assets\/|\/src\/)/i.test(imagePath)) return imagePath;
+        const fileName = imagePath.split('/').pop();
+        return `/src/assets/images/${fileName}`;
     };
 
     return (
@@ -41,11 +52,29 @@ export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailC
                     style={{ height: '180px', cursor: 'pointer' }}
                     onClick={() => onDetailClick?.(bike)}
                 >
-                    <img src={`/src/assets/images/${bike.image}`} alt={bike.name} className="w-100 h-100 object-fit-contain" />
+                    <img
+                        src={getImageSrc(bike.image)}
+                        alt={bike.name}
+                        className="w-100 h-100 object-fit-contain"
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                                'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=300&q=80';
+                        }}
+                    />
                 </div>
 
                 <div className="card-body d-flex flex-column">
-                    <small className="text-muted mb-1">{bike.category}</small>
+                    <div className="d-flex justify-content-between align-items-center mb-1 gap-2">
+                        <small className="text-muted text-truncate">{bike.category}</small>
+                        <button
+                            type="button"
+                            className="btn btn-sm p-0 border-0 bg-transparent flex-shrink-0"
+                            title={liked ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
+                            onClick={() => toggleWishlist(bike)}
+                        >
+                            <i className={`${liked ? 'fa-solid text-danger' : 'fa-regular text-secondary'} fa-heart fs-6`}></i>
+                        </button>
+                    </div>
 
                     <h5
                         className="card-title fs-6 fw-bold text-dark text-truncate mb-2"
@@ -74,6 +103,7 @@ export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailC
                         </div>
 
                         <button
+                            type="button"
                             className={`btn w-100 btn-sm py-2 fw-semibold ${bike.stock === 0 ? 'btn-secondary disabled' : 'btn-dark'}`}
                             onClick={handleAddToCart}
                             disabled={bike.stock === 0}
