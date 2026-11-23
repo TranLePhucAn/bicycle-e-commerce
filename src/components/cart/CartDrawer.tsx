@@ -1,16 +1,40 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCart } from '../../context/CartContext';
 import bikesData from '../../data/bikes.json';
+import { getCouponDiscount, getShippingFee, isCouponCodeValid, normalizeCouponCode } from '../../services/couponService';
 
 interface CartDrawerProps {
     isOpen: boolean;
     onClose: () => void;
     onViewCart: () => void;
-    onCheckout: (items: Array<{ id: string; name: string; price: number; quantity: number; image?: string }>) => void;
+    onCheckout: (items: Array<{ id: string; name: string; price: number; quantity: number; image?: string }>, couponCode: string) => void;
 }
 
 export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: CartDrawerProps) {
     const { cartItems, totalCount, subtotal, updateQuantity, removeFromCart } = useCart();
+    const [couponInput, setCouponInput] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState('');
+    const [couponMessage, setCouponMessage] = useState('');
+    const discount = getCouponDiscount(appliedCoupon, subtotal);
+    const shippingFee = cartItems.length > 0 ? getShippingFee('standard', appliedCoupon) : 0;
+    const total = Math.max(0, subtotal - discount + shippingFee);
+
+    const handleApplyCoupon = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const code = normalizeCouponCode(couponInput);
+        if (!code) {
+            setAppliedCoupon('');
+            setCouponMessage('');
+            return;
+        }
+        if (!isCouponCodeValid(code)) {
+            setAppliedCoupon('');
+            setCouponMessage('Mã không hợp lệ. Hãy thử BIKE10 hoặc FREESHIP.');
+            return;
+        }
+        setAppliedCoupon(code);
+        setCouponMessage(code === 'BIKE10' ? 'Đã giảm 10% tiền sản phẩm.' : 'Đã miễn phí vận chuyển.');
+    };
 
     const getStock = (originalBikeId?: string, id?: string) => {
         try {
@@ -171,9 +195,31 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
                 {/* Footer */}
                 {cartItems.length > 0 && (
                     <div className="p-3 border-top bg-light">
+                        <form onSubmit={handleApplyCoupon} className="mb-3">
+                            <label className="form-label small fw-semibold mb-1" htmlFor="drawer-coupon">Mã giảm giá</label>
+                            <div className="input-group input-group-sm">
+                                <input id="drawer-coupon" className="form-control" value={couponInput}
+                                    onChange={(event) => setCouponInput(event.target.value)} placeholder="BIKE10 hoặc FREESHIP" />
+                                <button type="submit" className="btn btn-outline-primary">Áp dụng</button>
+                            </div>
+                            {couponMessage && <small className={`d-block mt-1 ${appliedCoupon ? 'text-success' : 'text-danger'}`} role="status">{couponMessage}</small>}
+                        </form>
                         <div className="d-flex justify-content-between align-items-center mb-3">
                             <span className="text-muted fw-semibold">Tạm tính:</span>
                             <span className="fw-bold fs-5 text-danger">{subtotal.toLocaleString('vi-VN')} đ</span>
+                        </div>
+                        {discount > 0 && (
+                            <div className="d-flex justify-content-between small mb-2">
+                                <span>Giảm giá:</span><span>-{discount.toLocaleString('vi-VN')} đ</span>
+                            </div>
+                        )}
+                        <div className="d-flex justify-content-between small mb-2">
+                            <span>Phí giao hàng:</span>
+                            <span>{shippingFee === 0 ? 'Miễn phí' : `${shippingFee.toLocaleString('vi-VN')} đ`}</span>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center mb-3 pt-2 border-top">
+                            <span className="fw-bold">Tổng cộng:</span>
+                            <span className="fw-bold fs-5 text-danger">{total.toLocaleString('vi-VN')} đ</span>
                         </div>
 
                         <div className="d-grid gap-2">
@@ -188,7 +234,7 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
                                         price: item.price,
                                         quantity: item.quantity,
                                         image: item.image,
-                                    })));
+                                    })), appliedCoupon);
                                 }}
                             >
                                 <i className="fa-solid fa-credit-card me-2"></i>Tiến Hành Thanh Toán
