@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useCart } from '../../context/CartContext';
-import { useWishlist } from '../../context/WishlistContext';
+import NotificationMenu from './NotificationMenu';
 
 interface NavbarProps {
     currentTab?: string;
@@ -16,7 +16,6 @@ export default function Navbar({currentTab = 'home', selectedCategory = 'Tất c
     const { user, isLoggedIn, logout, openLoginModal } = useAuth();
     const { showToast } = useToast();
     const { totalCount } = useCart();
-    const { wishlistCount } = useWishlist();
     const [searchTerm, setSearchTerm] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -122,7 +121,8 @@ export default function Navbar({currentTab = 'home', selectedCategory = 'Tất c
                             </form>
                         </div>
 
-                        <div className="d-flex justify-content-center justify-content-md-end align-items-center gap-2 flex-wrap flex-md-nowrap flex-shrink-0">
+                        <div className="col-12 col-md-6 d-flex justify-content-center justify-content-md-end align-items-center gap-2 flex-wrap">
+                            <NotificationMenu />
                             <button
                                 type="button"
                                 onClick={(e) => handleTabClick(e, 'history')}
@@ -133,21 +133,6 @@ export default function Navbar({currentTab = 'home', selectedCategory = 'Tất c
                             >
                                 <i className="fa-solid fa-clock-rotate-left"></i>
                                 <span className="fw-semibold small">Lịch sử đơn</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={(e) => handleTabClick(e, 'wishlist')}
-                                className={`btn rounded-3 d-flex align-items-center gap-2 px-2 px-xxl-3 py-2 text-nowrap ${
-                                    currentTab === 'wishlist' ? 'btn-primary text-white' : 'btn-outline-secondary'
-                                }`}
-                                title="Xem danh sách yêu thích"
-                            >
-                                <i className={`${currentTab === 'wishlist' ? 'fa-solid' : 'fa-regular'} fa-heart`}></i>
-                                <span className="fw-semibold small">Yêu thích</span>
-                                <span className="badge fw-bold px-2 py-1 rounded-pill bg-danger text-white">
-                                    {wishlistCount}
-                                </span>
                             </button>
 
                             <button

@@ -7,7 +7,8 @@ import { WishlistProvider } from './context/WishlistContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Hero from './components/layout/Hero';
-import BiketList from './components/home/BikeList.tsx';
+import BikeList from './components/home/BikeList';
+import BikeDetail from './components/home/BikeDetail';
 import Cart from './components/cart/Cart';
 import CartDrawer from './components/cart/CartDrawer';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -15,11 +16,11 @@ import NotFound from './components/common/NotFound';
 import LoginModal from './components/auth/LoginModal';
 import Checkout from './components/checkout/Checkout';
 import OrderSuccess from './components/checkout/OrderSuccess';
-import type { CheckoutItem, OrderRecord } from './services/checkoutService';
-import AboutPage from './components/about/AboutPage.tsx';
-import BikeDetail from './components/home/BikeDetail';
-import AccountPage from './components/account/AccountPage';
 import WishlistPage from './components/wishlist/WishlistPage';
+import AccountPage from './components/account/AccountPage';
+import AboutPage from './components/about/AboutPage';
+import type { CheckoutItem, OrderRecord } from './services/checkoutService';
+import { addNotification } from './services/customerService';
 
 const OrderHistory = lazy(() => import('./components/history/OrderHistory'));
 
@@ -28,23 +29,22 @@ function MainLayout() {
     const [selectedCategory, setSelectedCategory] = useState<string | string[]>('Tất cả');
     const [searchKeyword, setSearchKeyword] = useState('');
     const [selectedBike, setSelectedBike] = useState<any>(null);
-    const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
     const [createdOrder, setCreatedOrder] = useState<OrderRecord | null>(null);
+    const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
     const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
-    const { cartItems, addToCart, refreshCart } = useCart();
+    const { addToCart, refreshCart } = useCart();
 
     const handleSelectTab = (tabOrCategory: string | string[]) => {
         setSearchKeyword('');
         setSelectedBike(null);
-
-        if (typeof tabOrCategory === 'string' && ['home', 'cart', 'wishlist', 'history', 'about', 'account', 'not-found'].includes(tabOrCategory)) {
+        setIsCartDrawerOpen(false);
+        if (typeof tabOrCategory === 'string' && ['home', 'cart', 'history', 'wishlist', 'account', 'about', 'not-found'].includes(tabOrCategory)) {
             setCurrentTab(tabOrCategory);
             if (tabOrCategory === 'home') setSelectedCategory('Tất cả');
-            return;
+        } else {
+            setCurrentTab('home');
+            setSelectedCategory(tabOrCategory);
         }
-
-        setCurrentTab('home');
-        setSelectedCategory(tabOrCategory);
     };
 
     const handleSearch = (keyword: string) => {
@@ -52,6 +52,7 @@ function MainLayout() {
         setSelectedCategory('Tất cả');
         setSearchKeyword(keyword);
         setSelectedBike(null);
+        setIsCartDrawerOpen(false);
     };
 
     return (
@@ -64,20 +65,6 @@ function MainLayout() {
                 onOpenCartDrawer={() => setIsCartDrawerOpen(true)}
             />
 
-            <CartDrawer
-                isOpen={isCartDrawerOpen}
-                onClose={() => setIsCartDrawerOpen(false)}
-                onViewCart={() => {
-                    setIsCartDrawerOpen(false);
-                    setCurrentTab('cart');
-                }}
-                onCheckout={() => {
-                    setIsCartDrawerOpen(false);
-                    setCheckoutItems(cartItems);
-                    setCurrentTab('checkout');
-                }}
-            />
-
             <main className="flex-grow-1">
                 {currentTab === 'home' && (
                     <>
@@ -85,10 +72,14 @@ function MainLayout() {
                             <BikeDetail
                                 bike={selectedBike}
                                 onSelectTab={handleSelectTab}
-                                onAddToCart={(bike, qty) => {
-                                    const res = addToCart(bike, qty);
+                                onSelectBike={(bike) => {
+                                    setSelectedBike(bike);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }}
+                                onAddToCart={(bike, quantity) => {
+                                    const result = addToCart(bike, quantity);
                                     setIsCartDrawerOpen(true);
-                                    return res;
+                                    return result;
                                 }}
                             />
                         ) : (
@@ -98,11 +89,11 @@ function MainLayout() {
                                         <Hero />
                                     </div>
                                 )}
-                                <BiketList
+                                <BikeList
                                     selectedCategory={selectedCategory}
                                     searchKeyword={searchKeyword}
                                     onSelectTab={handleSelectTab}
-                                    onSelectBike={(bike: any) => {
+                                    onSelectBike={(bike) => {
                                         setSelectedBike(bike);
                                         window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
@@ -112,7 +103,7 @@ function MainLayout() {
                     </>
                 )}
 
-                <div style={{ display: currentTab === 'cart' ? 'block' : 'none' }}>
+                {currentTab === 'cart' && (
                     <Cart
                         onContinueShopping={() => setCurrentTab('home')}
                         onCheckout={(items) => {
@@ -120,7 +111,7 @@ function MainLayout() {
                             setCurrentTab('checkout');
                         }}
                     />
-                </div>
+                )}
 
                 {currentTab === 'wishlist' && (
                     <ProtectedRoute
@@ -134,10 +125,10 @@ function MainLayout() {
                                 setCurrentTab('home');
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                             }}
-                            onMoveToCart={(bikeItem) => {
-                                const res = addToCart(bikeItem, 1);
+                            onMoveToCart={(bike) => {
+                                const result = addToCart(bike, 1);
                                 setIsCartDrawerOpen(true);
-                                return res;
+                                return result;
                             }}
                         />
                     </ProtectedRoute>
@@ -148,9 +139,10 @@ function MainLayout() {
                         items={checkoutItems}
                         onCancel={() => setCurrentTab('cart')}
                         onOrderCreated={(order) => {
-                            if (refreshCart) {
-                                refreshCart().catch((error) => console.error('Không thể tải lại giỏ hàng:', error));
+                            if (order.userId) {
+                                addNotification(order.userId, 'Đặt hàng thành công', `Đơn ${order.id} đã được ghi nhận.`, 'order');
                             }
+                            refreshCart().catch((error) => console.error('Không thể tải lại giỏ hàng:', error));
                             setCreatedOrder(order);
                             setCurrentTab('order-success');
                         }}
@@ -206,6 +198,19 @@ function MainLayout() {
                     )}
             </main>
 
+            <CartDrawer
+                isOpen={isCartDrawerOpen}
+                onClose={() => setIsCartDrawerOpen(false)}
+                onViewCart={() => {
+                    setIsCartDrawerOpen(false);
+                    setCurrentTab('cart');
+                }}
+                onCheckout={(items) => {
+                    setCheckoutItems(items);
+                    setIsCartDrawerOpen(false);
+                    setCurrentTab('checkout');
+                }}
+            />
             <LoginModal />
             <Footer />
         </div>
