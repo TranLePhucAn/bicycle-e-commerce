@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCart } from '../../context/CartContext';
-import bikesData from '../../data/bikes.json';
 import { getCouponDiscount, getShippingFee, isCouponCodeValid, normalizeCouponCode } from '../../services/couponService';
+import { checkCartStock } from '../../services/inventoryApi';
 
 interface CartDrawerProps {
     isOpen: boolean;
@@ -15,9 +15,40 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
     const [couponInput, setCouponInput] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState('');
     const [couponMessage, setCouponMessage] = useState('');
+    const [liveStock, setLiveStock] = useState<Record<string, number>>({});
+    const [isCheckingStock, setIsCheckingStock] = useState(false);
+    const [stockCheckError, setStockCheckError] = useState(false);
     const discount = getCouponDiscount(appliedCoupon, subtotal);
     const shippingFee = cartItems.length > 0 ? getShippingFee('standard', appliedCoupon) : 0;
     const total = Math.max(0, subtotal - discount + shippingFee);
+
+    useEffect(() => {
+        if (!isOpen || cartItems.length === 0) {
+            if (cartItems.length === 0) setLiveStock({});
+            setIsCheckingStock(false);
+            return;
+        }
+
+        let isActive = true;
+        setIsCheckingStock(true);
+        setStockCheckError(false);
+        checkCartStock(cartItems.map((item) => ({
+            id: item.originalBikeId || item.id,
+            name: item.name,
+            quantity: item.quantity,
+        })))
+            .then((results) => {
+                if (isActive) setLiveStock(Object.fromEntries(results.map((item) => [item.id, item.available])));
+            })
+            .catch(() => {
+                if (isActive) setStockCheckError(true);
+            })
+            .finally(() => {
+                if (isActive) setIsCheckingStock(false);
+            });
+
+        return () => { isActive = false; };
+    }, [isOpen, cartItems]);
 
     const handleApplyCoupon = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -36,16 +67,9 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
         setCouponMessage(code === 'BIKE10' ? 'Đã giảm 10% tiền sản phẩm.' : 'Đã miễn phí vận chuyển.');
     };
 
-    const getStock = (originalBikeId?: string, id?: string) => {
-        try {
-            const stockMap = JSON.parse(localStorage.getItem('bike_stock') || '{}');
-            const targetId = originalBikeId || id;
-            if (targetId && stockMap[targetId] !== undefined) return stockMap[targetId];
-            const found = bikesData.find((b) => b.id === targetId);
-            return found ? found.stock : 99;
-        } catch {
-            return 99;
-        }
+    const getStock = (originalBikeId?: string, id?: string, lastKnownStock?: number) => {
+        const targetId = originalBikeId || id;
+        return (targetId ? liveStock[targetId] : undefined) ?? lastKnownStock ?? 0;
     };
 
     if (!isOpen) return null;
@@ -85,6 +109,12 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
 
                 {/* Items List */}
                 <div className="flex-grow-1 overflow-auto p-3">
+                    {isCheckingStock && cartItems.length > 0 && (
+                        <div className="alert alert-info py-2 small" role="status">Đang kiểm tra tồn kho mới nhất...</div>
+                    )}
+                    {stockCheckError && cartItems.length > 0 && (
+                        <div className="alert alert-warning py-2 small" role="alert">Chưa thể tải tồn kho mới nhất. Hãy kiểm tra kết nối rồi thử lại.</div>
+                    )}
                     {cartItems.length === 0 ? (
                         <div className="text-center py-5 text-muted">
                             <i className="fa-solid fa-cart-shopping fs-1 mb-3 opacity-25"></i>
@@ -100,7 +130,7 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
                     ) : (
                         <div className="d-flex flex-column gap-3">
                             {cartItems.map((item) => {
-                                const stock = getStock(item.originalBikeId, item.id);
+                                const stock = getStock(item.originalBikeId, item.id, item.stock);
                                 const isOverStock = item.quantity > stock;
 
                                 return (
@@ -174,7 +204,7 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
                                                         className="btn btn-outline-secondary px-2 py-0"
                                                         type="button"
                                                         onClick={() => updateQuantity(item.id, 1)}
-                                                        disabled={item.quantity >= stock}
+                                                        disabled={isCheckingStock || stockCheckError || item.quantity >= stock}
                                                     >
                                                         +
                                                     </button>
@@ -236,6 +266,7 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
                                         image: item.image,
                                     })), appliedCoupon);
                                 }}
+                                disabled={isCheckingStock || stockCheckError || cartItems.some((item) => item.quantity > getStock(item.originalBikeId, item.id, item.stock))}
                             >
                                 <i className="fa-solid fa-credit-card me-2"></i>Tiến Hành Thanh Toán
                             </button>
