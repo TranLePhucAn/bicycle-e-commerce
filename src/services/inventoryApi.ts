@@ -1,6 +1,4 @@
-import { callFakeApi } from './fakeApi';
-import bikesData from '../data/bikes.json';
-import { STOCK_STORAGE_KEY } from './checkoutService';
+import { apiRequest } from './apiClient';
 
 export interface StockCheckResult {
     id: string;
@@ -11,12 +9,11 @@ export interface StockCheckResult {
 }
 
 export async function checkCartStock(items: { id: string; name: string; quantity: number }[]) {
-    const raw = localStorage.getItem(STOCK_STORAGE_KEY);
-    const stockMap: Record<string, number> = raw ? JSON.parse(raw) : {};
+    const { bikes } = await apiRequest<{ bikes: { id: string; stock: number }[] }>('/api/bikes');
+    const stockMap = new Map(bikes.map((bike) => [bike.id, bike.stock]));
 
     const results: StockCheckResult[] = items.map((item) => {
-        const bike = bikesData.find((b) => b.id === item.id);
-        const available = stockMap[item.id] ?? bike?.stock ?? 0;
+        const available = stockMap.get(item.id) ?? 0;
 
         return {
             id: item.id,
@@ -27,5 +24,5 @@ export async function checkCartStock(items: { id: string; name: string; quantity
         };
     });
 
-    return callFakeApi(results, 500);
+    return results;
 }
