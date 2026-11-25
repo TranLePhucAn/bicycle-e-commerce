@@ -14,6 +14,7 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
     const [loadError, setLoadError] = useState('');
     const [loadAttempt, setLoadAttempt] = useState(0);
     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+    const [selectedColors, setSelectedColors] = useState<string[]>([]);
     const [selectedFrameSizes, setSelectedFrameSizes] = useState<string[]>([]);
     const [priceRange, setPriceRange] = useState<string>('all');
     const [onlyDiscount, setOnlyDiscount] = useState<boolean>(false);
@@ -49,13 +50,37 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
     const allFrameSizes = ['S', 'M', 'L', 'XL'];
 
     useEffect(() => {
+        setSelectedBrands([]);
+        setSelectedColors([]);
+        setSelectedFrameSizes([]);
+        setPriceRange('all');
+        setOnlyDiscount(false);
+        setBrandSearch('');
+        setSortBy('newest');
+    }, [selectedCategory, searchKeyword]);
+
+    useEffect(() => {
         setCurrentPage(1);
         setVisibleCount(12);
-    }, [selectedCategory, searchKeyword, selectedBrands, selectedFrameSizes, priceRange, onlyDiscount, sortBy]);
+    }, [selectedCategory, searchKeyword, selectedBrands, selectedColors, selectedFrameSizes, priceRange, onlyDiscount, sortBy]);
 
     const availableBrands = useMemo(() => {
         const brands = Array.from(new Set(bikesData.map((b: any) => b.brand).filter(Boolean)));
         return brands as string[];
+    }, [bikesData]);
+
+    const availableColors = useMemo(() => {
+        const colors = new Set<string>();
+        bikesData.forEach((b: any) => {
+            if (Array.isArray(b.colors)) {
+                b.colors.forEach((c: any) => {
+                    if (typeof c === 'string' && c.trim()) colors.add(c.trim());
+                });
+            } else if (typeof b.color === 'string' && b.color.trim()) {
+                colors.add(b.color.trim());
+            }
+        });
+        return Array.from(colors);
     }, [bikesData]);
 
     const filteredBikes = useMemo(() => {
@@ -78,6 +103,17 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
 
         if (!isHomePage && selectedBrands.length > 0) {
             result = result.filter((bike: any) => selectedBrands.includes(bike.brand));
+        }
+
+        if (!isHomePage && selectedColors.length > 0) {
+            result = result.filter((bike: any) => {
+                const bikeColors = Array.isArray(bike.colors)
+                    ? bike.colors
+                    : bike.color
+                        ? [bike.color]
+                        : [];
+                return selectedColors.some((color) => bikeColors.includes(color));
+            });
         }
 
         if (!isHomePage && selectedFrameSizes.length > 0) {
@@ -107,14 +143,14 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
 
         if (!isHomePage) {
             if (sortBy === 'price-asc') {
-                result.sort((a: any, b: any) => a.price - b.price);
+                result.sort((a: any, b: any) => (a.price || 0) - (b.price || 0));
             } else if (sortBy === 'price-desc') {
-                result.sort((a: any, b: any) => b.price - a.price);
+                result.sort((a: any, b: any) => (b.price || 0) - (a.price || 0));
             }
         }
 
         return result;
-    }, [bikesData, selectedCategory, searchKeyword, selectedBrands, selectedFrameSizes, onlyDiscount, priceRange, sortBy, isHomePage, isSearchPage]);
+    }, [bikesData, selectedCategory, searchKeyword, selectedBrands, selectedColors, selectedFrameSizes, onlyDiscount, priceRange, sortBy, isHomePage, isSearchPage]);
 
     const handleBrandToggle = (brand: string) => {
         setSelectedBrands((prev) =>
@@ -122,10 +158,32 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
         );
     };
 
+    const handleColorToggle = (color: string) => {
+        setSelectedColors((prev) =>
+            prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color]
+        );
+    };
+
     const handleFrameSizeToggle = (size: string) => {
         setSelectedFrameSizes((prev) =>
             prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
         );
+    };
+
+    const hasActiveFilters =
+        selectedBrands.length > 0 ||
+        selectedColors.length > 0 ||
+        selectedFrameSizes.length > 0 ||
+        priceRange !== 'all' ||
+        onlyDiscount;
+
+    const handleResetFilters = () => {
+        setSelectedBrands([]);
+        setSelectedColors([]);
+        setSelectedFrameSizes([]);
+        setPriceRange('all');
+        setOnlyDiscount(false);
+        setBrandSearch('');
     };
 
     const getTitle = () => {
@@ -339,7 +397,18 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
             <div className="row g-4">
                 <div className="col-12 col-lg-3">
                     <div className="p-3 rounded">
-                        <h5 className="fw-bold text-uppercase mb-1">BỘ LỌC</h5>
+                        <div className="d-flex align-items-center justify-content-between mb-1">
+                            <h5 className="fw-bold text-uppercase m-0">BỘ LỌC</h5>
+                            {hasActiveFilters && (
+                                <button
+                                    type="button"
+                                    className="btn btn-link btn-sm text-danger text-decoration-none p-0 fw-semibold"
+                                    onClick={handleResetFilters}
+                                >
+                                    Xóa bộ lọc
+                                </button>
+                            )}
+                        </div>
                         <p className="text-muted small mb-4">Giúp lọc nhanh sản phẩm bạn tìm kiếm</p>
 
                         <hr />
@@ -370,6 +439,28 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
                                         />
                                         <label className="form-check-label text-secondary small" htmlFor={`brand-${brand}`}>
                                             {brand}
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <div className="mb-4">
+                            <h6 className="fw-bold text-dark mb-2">Màu sắc</h6>
+                            <div className="d-flex flex-column gap-2 overflow-auto" style={{ maxHeight: '180px' }}>
+                                {availableColors.map((color) => (
+                                    <div key={color} className="form-check">
+                                        <input
+                                            className="form-check-input"
+                                            type="checkbox"
+                                            id={`color-${color}`}
+                                            checked={selectedColors.includes(color)}
+                                            onChange={() => handleColorToggle(color)}
+                                        />
+                                        <label className="form-check-label text-secondary small" htmlFor={`color-${color}`}>
+                                            {color}
                                         </label>
                                     </div>
                                 ))}
