@@ -1,7 +1,5 @@
 import bikesData from '../data/bikes.json';
 import {
-    getCouponDiscount,
-    getShippingFee,
     isCouponCodeValid,
     normalizeCouponCode,
 } from './couponService';

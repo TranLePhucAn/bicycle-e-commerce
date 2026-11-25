@@ -35,6 +35,16 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const CURRENT_USER_KEY = 'current_user';
+
+function saveCurrentUser(user: User | null) {
+    try {
+        if (user) localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+        else localStorage.removeItem(CURRENT_USER_KEY);
+    } catch (error) {
+        console.warn('Không thể lưu thông tin tài khoản hiện tại:', error);
+    }
+}
 
 async function importLegacyOrders() {
     const savedOrders = localStorage.getItem('my_orders');
@@ -69,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const result = await apiRequest<{ user: User | null }>('/api/auth/me');
             if (result.user) {
                 setUser(result.user);
+                saveCurrentUser(result.user);
                 importLegacyOrders().catch((error) => console.error('Không thể chuyển lịch sử đơn hàng cũ:', error));
                 return;
             }
@@ -78,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 try {
                     const legacyUsers = JSON.parse(savedUsers);
                     if (Array.isArray(legacyUsers) && legacyUsers.length > 0) {
+                        let restoredCurrentUser = false;
                         await apiRequest('/api/auth/import-users', {
                             method: 'POST',
                             body: JSON.stringify({
@@ -103,6 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                                         body: JSON.stringify({ email: legacyAccount.email, password: legacyAccount.password }),
                                     });
                                     setUser(loginResult.user);
+                                    saveCurrentUser(loginResult.user);
+                                    restoredCurrentUser = true;
                                 }
                             } catch {
                                 // Bỏ qua nếu dữ liệu current_user cũ không hợp lệ
@@ -110,13 +124,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         }
 
                         localStorage.removeItem('bikeshop_users');
-                        localStorage.removeItem('current_user');
+                        if (!restoredCurrentUser) saveCurrentUser(null);
                         importLegacyOrders().catch((err) => console.error('Không thể chuyển lịch sử đơn hàng cũ:', err));
+                    } else {
+                        saveCurrentUser(null);
                     }
                 } catch {
                     localStorage.removeItem('bikeshop_users');
-                    localStorage.removeItem('current_user');
+                    saveCurrentUser(null);
                 }
+            } else {
+                saveCurrentUser(null);
             }
         } catch (error) {
             console.error('Không thể kiểm tra phiên đăng nhập:', error);
@@ -138,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify({ email, password }),
             });
             setUser(result.user);
+            saveCurrentUser(result.user);
             setIsLoginModalOpen(false);
             importLegacyOrders().catch((error) => console.error('Không thể chuyển lịch sử đơn hàng cũ:', error));
             return { success: true, message: `Chào mừng trở lại, ${result.user.name}!` };
@@ -156,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify(userData),
             });
             setUser(result.user);
+            saveCurrentUser(result.user);
             setIsLoginModalOpen(false);
             importLegacyOrders().catch((error) => console.error('Không thể chuyển lịch sử đơn hàng cũ:', error));
             return { success: true, message: `Chúc mừng ${result.user.name}! Bạn đã đăng ký thành công.` };
@@ -171,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             const result = await apiRequest<{ user: User }>('/api/auth/demo', { method: 'POST' });
             setUser(result.user);
+            saveCurrentUser(result.user);
             setIsLoginModalOpen(false);
             return { success: true, message: `Chào mừng trở lại, ${result.user.name}!` };
         } catch (error) {
@@ -188,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify(data),
             });
             setUser(result.user);
+            saveCurrentUser(result.user);
             return { success: true, message: result.message || 'Cập nhật hồ sơ thành công!' };
         } catch (error) {
             // Local fallback
@@ -195,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const updated = { ...user, name: data.name, phone: data.phone || '' };
                 setUser(updated);
                 try {
-                    localStorage.setItem('current_user', JSON.stringify(updated));
+                    saveCurrentUser(updated);
                 } catch {}
                 return { success: true, message: 'Cập nhật hồ sơ thành công!' };
             }
@@ -220,6 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await apiRequest('/api/auth/logout', { method: 'POST' });
         } finally {
             setUser(null);
+            saveCurrentUser(null);
         }
     };
 

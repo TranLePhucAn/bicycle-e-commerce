@@ -22,7 +22,11 @@ import AboutPage from './components/about/AboutPage';
 import type { CheckoutItem, OrderRecord } from './services/checkoutService';
 import { addNotification } from './services/customerService';
 
-const OrderHistory = lazy(() => import('./components/history/OrderHistory'));
+const OrderHistory = lazy(async () => {
+    const { default: $ } = await import('jquery');
+    Object.assign(window, { $, jQuery: $ });
+    return import('./components/history/OrderHistory');
+});
 
 function MainLayout() {
     const [currentTab, setCurrentTab] = useState('home');
@@ -31,6 +35,7 @@ function MainLayout() {
     const [selectedBike, setSelectedBike] = useState<any>(null);
     const [createdOrder, setCreatedOrder] = useState<OrderRecord | null>(null);
     const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
+    const [checkoutCoupon, setCheckoutCoupon] = useState('');
     const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
     const { addToCart, refreshCart } = useCart();
 
@@ -108,6 +113,7 @@ function MainLayout() {
                         onContinueShopping={() => setCurrentTab('home')}
                         onCheckout={(items) => {
                             setCheckoutItems(items);
+                            setCheckoutCoupon('');
                             setCurrentTab('checkout');
                         }}
                     />
@@ -137,6 +143,7 @@ function MainLayout() {
                 {currentTab === 'checkout' && (
                     <Checkout
                         items={checkoutItems}
+                        initialCoupon={checkoutCoupon}
                         onCancel={() => setCurrentTab('cart')}
                         onOrderCreated={(order) => {
                             if (order.userId) {
@@ -205,8 +212,9 @@ function MainLayout() {
                     setIsCartDrawerOpen(false);
                     setCurrentTab('cart');
                 }}
-                onCheckout={(items) => {
+                onCheckout={(items, couponCode) => {
                     setCheckoutItems(items);
+                    setCheckoutCoupon(couponCode);
                     setIsCartDrawerOpen(false);
                     setCurrentTab('checkout');
                 }}

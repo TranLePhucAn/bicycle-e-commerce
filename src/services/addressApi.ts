@@ -1,5 +1,5 @@
 import { callFakeApi } from './fakeApi';
-import type { Address } from '../context/AuthContext';
+import type { Address } from './AuthContext';
 
 const USERS_KEY = 'bikeshop_users';
 

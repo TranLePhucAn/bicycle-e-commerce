@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCart } from '../../context/CartContext';
 import type { CheckoutItem } from '../../services/checkoutService';
 import {
@@ -7,7 +7,7 @@ import {
     getCouponDiscount,
     getShippingFee,
 } from '../../services/couponService';
-import bikesData from '../../data/bikes.json';
+import { checkCartStock } from '../../services/inventoryApi';
 
 interface CartProps {
     onContinueShopping: () => void;
@@ -29,17 +29,42 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
     const [couponInput, setCouponInput] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState('');
     const [couponMessage, setCouponMessage] = useState<{ text: string; type: 'success' | 'danger' } | null>(null);
+    const [liveStock, setLiveStock] = useState<Record<string, number>>({});
+    const [isCheckingStock, setIsCheckingStock] = useState(false);
+    const [stockCheckError, setStockCheckError] = useState(false);
 
-    const getStock = (originalBikeId?: string, id?: string) => {
-        try {
-            const stockMap = JSON.parse(localStorage.getItem('bike_stock') || '{}');
-            const targetId = originalBikeId || id;
-            if (targetId && stockMap[targetId] !== undefined) return stockMap[targetId];
-            const found = bikesData.find((b) => b.id === targetId);
-            return found ? found.stock : 99;
-        } catch {
-            return 99;
+    useEffect(() => {
+        if (cartItems.length === 0) {
+            setLiveStock({});
+            setStockCheckError(false);
+            setIsCheckingStock(false);
+            return;
         }
+
+        let isActive = true;
+        setIsCheckingStock(true);
+        setStockCheckError(false);
+        checkCartStock(cartItems.map((item) => ({
+            id: item.originalBikeId || item.id,
+            name: item.name,
+            quantity: item.quantity,
+        })))
+            .then((results) => {
+                if (isActive) setLiveStock(Object.fromEntries(results.map((item) => [item.id, item.available])));
+            })
+            .catch(() => {
+                if (isActive) setStockCheckError(true);
+            })
+            .finally(() => {
+                if (isActive) setIsCheckingStock(false);
+            });
+
+        return () => { isActive = false; };
+    }, [cartItems]);
+
+    const getStock = (originalBikeId?: string, id?: string, lastKnownStock?: number) => {
+        const targetId = originalBikeId || id;
+        return (targetId ? liveStock[targetId] : undefined) ?? lastKnownStock ?? 0;
     };
 
     const selectedItems = cartItems.filter((item) => selectedIds.includes(item.id));
@@ -51,7 +76,7 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
     const finalTotal = Math.max(0, subtotal - discount + shippingFee);
 
     const overStockItems = selectedItems.filter((item) => {
-        const stock = getStock(item.originalBikeId, item.id);
+        const stock = getStock(item.originalBikeId, item.id, item.stock);
         return item.quantity > stock;
     });
     const hasStockError = overStockItems.length > 0;
@@ -115,6 +140,13 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                 </div>
             )}
 
+            {isCheckingStock && cartItems.length > 0 && (
+                <div className="alert alert-info py-2" role="status">Đang kiểm tra tồn kho mới nhất...</div>
+            )}
+            {stockCheckError && cartItems.length > 0 && (
+                <div className="alert alert-warning py-2" role="alert">Chưa thể tải tồn kho mới nhất. Vui lòng kiểm tra lại kết nối trước khi thanh toán.</div>
+            )}
+
             {cartItems.length === 0 ? (
                 <div className="text-center py-5 bg-light rounded-3 border">
                     <i className="fa-solid fa-cart-arrow-down fs-1 text-muted mb-3"></i>
@@ -130,7 +162,7 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                         <div className="card shadow-sm border-0 rounded-3 overflow-hidden">
                             <div className="card-header bg-dark text-white fw-semibold py-3 d-flex justify-content-between align-items-center">
                                 <span>Sản phẩm trong giỏ ({cartItems.length})</span>
-                                <small className="text-light opacity-75">Tự động kiểm tra số lượng tồn kho</small>
+                                <small className="text-light opacity-75">{isCheckingStock ? 'Đang kiểm tra tồn kho...' : 'Đã kiểm tra tồn kho mới nhất'}</small>
                             </div>
                             <div className="table-responsive">
                                 <table className="table align-middle mb-0">
@@ -154,7 +186,7 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                     </thead>
                                     <tbody>
                                     {cartItems.map((item: any) => {
-                                        const stock = getStock(item.originalBikeId, item.id);
+                                        const stock = getStock(item.originalBikeId, item.id, item.stock);
                                         const isOver = item.quantity > stock;
 
                                         return (
@@ -328,7 +360,7 @@ export default function Cart({ onContinueShopping, onCheckout }: CartProps) {
                                     type="button"
                                     className="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm mb-2"
                                     onClick={() => onCheckout(selectedItems)}
-                                    disabled={selectedItems.length === 0 || hasStockError}
+                                    disabled={selectedItems.length === 0 || hasStockError || isCheckingStock || stockCheckError}
                                 >
                                     Tiến Hành Thanh Toán
                                 </button>

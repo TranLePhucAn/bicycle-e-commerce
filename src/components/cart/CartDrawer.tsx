@@ -1,27 +1,75 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCart } from '../../context/CartContext';
-import bikesData from '../../data/bikes.json';
+import { getCouponDiscount, getShippingFee, isCouponCodeValid, normalizeCouponCode } from '../../services/couponService';
+import { checkCartStock } from '../../services/inventoryApi';
 
 interface CartDrawerProps {
     isOpen: boolean;
     onClose: () => void;
     onViewCart: () => void;
-    onCheckout: (items: Array<{ id: string; name: string; price: number; quantity: number; image?: string }>) => void;
+    onCheckout: (items: Array<{ id: string; name: string; price: number; quantity: number; image?: string }>, couponCode: string) => void;
 }
 
 export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: CartDrawerProps) {
     const { cartItems, totalCount, subtotal, updateQuantity, removeFromCart } = useCart();
+    const [couponInput, setCouponInput] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState('');
+    const [couponMessage, setCouponMessage] = useState('');
+    const [liveStock, setLiveStock] = useState<Record<string, number>>({});
+    const [isCheckingStock, setIsCheckingStock] = useState(false);
+    const [stockCheckError, setStockCheckError] = useState(false);
+    const discount = getCouponDiscount(appliedCoupon, subtotal);
+    const shippingFee = cartItems.length > 0 ? getShippingFee('standard', appliedCoupon) : 0;
+    const total = Math.max(0, subtotal - discount + shippingFee);
 
-    const getStock = (originalBikeId?: string, id?: string) => {
-        try {
-            const stockMap = JSON.parse(localStorage.getItem('bike_stock') || '{}');
-            const targetId = originalBikeId || id;
-            if (targetId && stockMap[targetId] !== undefined) return stockMap[targetId];
-            const found = bikesData.find((b) => b.id === targetId);
-            return found ? found.stock : 99;
-        } catch {
-            return 99;
+    useEffect(() => {
+        if (!isOpen || cartItems.length === 0) {
+            if (cartItems.length === 0) setLiveStock({});
+            setIsCheckingStock(false);
+            return;
         }
+
+        let isActive = true;
+        setIsCheckingStock(true);
+        setStockCheckError(false);
+        checkCartStock(cartItems.map((item) => ({
+            id: item.originalBikeId || item.id,
+            name: item.name,
+            quantity: item.quantity,
+        })))
+            .then((results) => {
+                if (isActive) setLiveStock(Object.fromEntries(results.map((item) => [item.id, item.available])));
+            })
+            .catch(() => {
+                if (isActive) setStockCheckError(true);
+            })
+            .finally(() => {
+                if (isActive) setIsCheckingStock(false);
+            });
+
+        return () => { isActive = false; };
+    }, [isOpen, cartItems]);
+
+    const handleApplyCoupon = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const code = normalizeCouponCode(couponInput);
+        if (!code) {
+            setAppliedCoupon('');
+            setCouponMessage('');
+            return;
+        }
+        if (!isCouponCodeValid(code)) {
+            setAppliedCoupon('');
+            setCouponMessage('Mã không hợp lệ. Hãy thử BIKE10 hoặc FREESHIP.');
+            return;
+        }
+        setAppliedCoupon(code);
+        setCouponMessage(code === 'BIKE10' ? 'Đã giảm 10% tiền sản phẩm.' : 'Đã miễn phí vận chuyển.');
+    };
+
+    const getStock = (originalBikeId?: string, id?: string, lastKnownStock?: number) => {
+        const targetId = originalBikeId || id;
+        return (targetId ? liveStock[targetId] : undefined) ?? lastKnownStock ?? 0;
     };
 
     if (!isOpen) return null;
@@ -61,6 +109,12 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
 
                 {/* Items List */}
                 <div className="flex-grow-1 overflow-auto p-3">
+                    {isCheckingStock && cartItems.length > 0 && (
+                        <div className="alert alert-info py-2 small" role="status">Đang kiểm tra tồn kho mới nhất...</div>
+                    )}
+                    {stockCheckError && cartItems.length > 0 && (
+                        <div className="alert alert-warning py-2 small" role="alert">Chưa thể tải tồn kho mới nhất. Hãy kiểm tra kết nối rồi thử lại.</div>
+                    )}
                     {cartItems.length === 0 ? (
                         <div className="text-center py-5 text-muted">
                             <i className="fa-solid fa-cart-shopping fs-1 mb-3 opacity-25"></i>
@@ -76,7 +130,7 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
                     ) : (
                         <div className="d-flex flex-column gap-3">
                             {cartItems.map((item) => {
-                                const stock = getStock(item.originalBikeId, item.id);
+                                const stock = getStock(item.originalBikeId, item.id, item.stock);
                                 const isOverStock = item.quantity > stock;
 
                                 return (
@@ -150,7 +204,7 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
                                                         className="btn btn-outline-secondary px-2 py-0"
                                                         type="button"
                                                         onClick={() => updateQuantity(item.id, 1)}
-                                                        disabled={item.quantity >= stock}
+                                                        disabled={isCheckingStock || stockCheckError || item.quantity >= stock}
                                                     >
                                                         +
                                                     </button>
@@ -171,9 +225,31 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
                 {/* Footer */}
                 {cartItems.length > 0 && (
                     <div className="p-3 border-top bg-light">
+                        <form onSubmit={handleApplyCoupon} className="mb-3">
+                            <label className="form-label small fw-semibold mb-1" htmlFor="drawer-coupon">Mã giảm giá</label>
+                            <div className="input-group input-group-sm">
+                                <input id="drawer-coupon" className="form-control" value={couponInput}
+                                    onChange={(event) => setCouponInput(event.target.value)} placeholder="BIKE10 hoặc FREESHIP" />
+                                <button type="submit" className="btn btn-outline-primary">Áp dụng</button>
+                            </div>
+                            {couponMessage && <small className={`d-block mt-1 ${appliedCoupon ? 'text-success' : 'text-danger'}`} role="status">{couponMessage}</small>}
+                        </form>
                         <div className="d-flex justify-content-between align-items-center mb-3">
                             <span className="text-muted fw-semibold">Tạm tính:</span>
                             <span className="fw-bold fs-5 text-danger">{subtotal.toLocaleString('vi-VN')} đ</span>
+                        </div>
+                        {discount > 0 && (
+                            <div className="d-flex justify-content-between small mb-2">
+                                <span>Giảm giá:</span><span>-{discount.toLocaleString('vi-VN')} đ</span>
+                            </div>
+                        )}
+                        <div className="d-flex justify-content-between small mb-2">
+                            <span>Phí giao hàng:</span>
+                            <span>{shippingFee === 0 ? 'Miễn phí' : `${shippingFee.toLocaleString('vi-VN')} đ`}</span>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center mb-3 pt-2 border-top">
+                            <span className="fw-bold">Tổng cộng:</span>
+                            <span className="fw-bold fs-5 text-danger">{total.toLocaleString('vi-VN')} đ</span>
                         </div>
 
                         <div className="d-grid gap-2">
@@ -188,8 +264,9 @@ export default function CartDrawer({ isOpen, onClose, onViewCart, onCheckout }: 
                                         price: item.price,
                                         quantity: item.quantity,
                                         image: item.image,
-                                    })));
+                                    })), appliedCoupon);
                                 }}
+                                disabled={isCheckingStock || stockCheckError || cartItems.some((item) => item.quantity > getStock(item.originalBikeId, item.id, item.stock))}
                             >
                                 <i className="fa-solid fa-credit-card me-2"></i>Tiến Hành Thanh Toán
                             </button>

@@ -16,8 +16,6 @@ export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailC
 
     const getStatusBadgeClass = (status: any) => {
         switch (status) {
-            case 'Còn hàng':
-                return 'bg-success';
             case 'Sắp hết':
                 return 'bg-warning text-dark';
             case 'Hết hàng':
@@ -43,9 +41,17 @@ export default function BikeCard({ bike, onDetailClick }: { bike: any; onDetailC
                     </span>
                 )}
 
-                <span className={`position-absolute top-0 end-0 badge m-2 z-1 ${getStatusBadgeClass(bike.status)}`}>
-                    {bike.status}
-                </span>
+                {bike.isNew ? (
+                    <span className="position-absolute top-0 end-0 badge bg-primary m-2 z-1">
+                        Mới
+                    </span>
+                ) : (
+                    bike.status && bike.status !== 'Còn hàng' && (
+                        <span className={`position-absolute top-0 end-0 badge m-2 z-1 ${getStatusBadgeClass(bike.status)}`}>
+                            {bike.status}
+                        </span>
+                    )
+                )}
 
                 <div
                     className="product-img-wrapper d-flex align-items-center justify-content-center bg-light p-2"

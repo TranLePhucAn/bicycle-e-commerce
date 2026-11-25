@@ -1,7 +1,7 @@
 import { callFakeApi } from './fakeApi';
 import type { CartItem } from '../context/CartContext';
 
-export async function mergeGuestCart(userId: string, guestItems: CartItem[], accountItems: CartItem[]) {
+export async function mergeGuestCart(_userId: string, guestItems: CartItem[], accountItems: CartItem[]) {
     const merged = [...accountItems];
 
     for (const guestItem of guestItems) {

@@ -4,7 +4,6 @@ import {
     getDefaultAddress,
     getUserAddresses,
     formatFullAddress,
-    type AddressItem,
 } from '../../services/addressService';
 import {
     getCouponDiscount,
@@ -23,14 +22,14 @@ import {
 
 interface CheckoutProps {
     items: CheckoutItem[];
+    initialCoupon?: string;
     onCancel: () => void;
     onOrderCreated: (order: OrderRecord) => void;
 }
 
-const emptyRecipient: RecipientDetails = { name: '', phone: '', email: '', address: '' };
 const formatPrice = (amount: number) => `${amount.toLocaleString('vi-VN')} đ`;
 
-export default function Checkout({ items, onCancel, onOrderCreated }: CheckoutProps) {
+export default function Checkout({ items, initialCoupon = '', onCancel, onOrderCreated }: CheckoutProps) {
     const { user } = useAuth();
     const savedAddresses = useMemo(() => user ? getUserAddresses(user.id) : [], [user]);
     const defaultAddress = useMemo(() => user ? getDefaultAddress(user.id) : null, [user]);
@@ -69,9 +68,11 @@ export default function Checkout({ items, onCancel, onOrderCreated }: CheckoutPr
     };
     const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
-    const [couponInput, setCouponInput] = useState('');
-    const [appliedCoupon, setAppliedCoupon] = useState('');
-    const [couponMessage, setCouponMessage] = useState('');
+    const [couponInput, setCouponInput] = useState(initialCoupon);
+    const [appliedCoupon, setAppliedCoupon] = useState(initialCoupon);
+    const [couponMessage, setCouponMessage] = useState(initialCoupon === 'BIKE10'
+        ? 'Đã giảm 10% tiền sản phẩm.'
+        : initialCoupon === 'FREESHIP' ? 'Đã miễn phí vận chuyển.' : '');
     const [confirming, setConfirming] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
