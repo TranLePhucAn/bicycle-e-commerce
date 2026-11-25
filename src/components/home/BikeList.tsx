@@ -3,6 +3,11 @@ import { loadBikes } from '../../services/bikeService';
 import BikeCard from './BikeCard';
 import '../../styles/home.css';
 
+function getNumericId(id: string): number {
+    const match = String(id || '').match(/\d+/);
+    return match ? Number(match[0]) : 0;
+}
+
 export default function BikeList({ selectedCategory = 'Tất cả', searchKeyword = '', onSelectTab, onSelectBike }: {
     selectedCategory?: string | string[];
     searchKeyword?: string;
@@ -102,7 +107,7 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
         }
 
         if (!isHomePage && selectedBrands.length > 0) {
-            result = result.filter((bike: any) => selectedBrands.includes(bike.brand));
+            result = result.filter((bike: any) => bike.brand && selectedBrands.includes(bike.brand));
         }
 
         if (!isHomePage && selectedColors.length > 0) {
@@ -141,16 +146,41 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
             );
         }
 
-        if (!isHomePage) {
-            if (sortBy === 'price-asc') {
-                result.sort((a: any, b: any) => (a.price || 0) - (b.price || 0));
-            } else if (sortBy === 'price-desc') {
-                result.sort((a: any, b: any) => (b.price || 0) - (a.price || 0));
-            }
-        }
-
         return result;
-    }, [bikesData, selectedCategory, searchKeyword, selectedBrands, selectedColors, selectedFrameSizes, onlyDiscount, priceRange, sortBy, isHomePage, isSearchPage]);
+    }, [bikesData, selectedCategory, searchKeyword, selectedBrands, selectedColors, selectedFrameSizes, onlyDiscount, priceRange, isHomePage, isSearchPage]);
+
+    const sortedBikes = useMemo(() => {
+        if (isHomePage) return filteredBikes;
+
+        return [...filteredBikes].sort((a: any, b: any) => {
+            if (sortBy === 'newest') {
+                if (a.createdAt || b.createdAt) {
+                    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    if (timeB !== timeA) return timeB - timeA;
+                }
+                const newDiff = Number(Boolean(b.isNew)) - Number(Boolean(a.isNew));
+                if (newDiff !== 0) return newDiff;
+                return getNumericId(b.id) - getNumericId(a.id);
+            }
+
+            if (sortBy === 'best-selling') {
+                const soldDiff = (b.soldCount ?? 0) - (a.soldCount ?? 0);
+                if (soldDiff !== 0) return soldDiff;
+                return String(a.id).localeCompare(String(b.id));
+            }
+
+            if (sortBy === 'price-asc') {
+                return (a.price || 0) - (b.price || 0);
+            }
+
+            if (sortBy === 'price-desc') {
+                return (b.price || 0) - (a.price || 0);
+            }
+
+            return 0;
+        });
+    }, [filteredBikes, sortBy, isHomePage]);
 
     const handleBrandToggle = (brand: string) => {
         setSelectedBrands((prev) =>
@@ -168,6 +198,11 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
         setSelectedFrameSizes((prev) =>
             prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
         );
+    };
+
+    const handleSortChange = (value: string) => {
+        setSortBy(value);
+        setCurrentPage(1);
     };
 
     const hasActiveFilters =
@@ -197,12 +232,12 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
         b.toLowerCase().includes(brandSearch.toLowerCase())
     );
 
-    const totalPages = Math.ceil(filteredBikes.length / itemsPerPage);
+    const totalPages = Math.ceil(sortedBikes.length / itemsPerPage);
     const paginatedBikes = useMemo(() => {
-        if (isHomePage) return filteredBikes.slice(0, visibleCount);
+        if (isHomePage) return sortedBikes.slice(0, visibleCount);
         const startIndex = (currentPage - 1) * itemsPerPage;
-        return filteredBikes.slice(startIndex, startIndex + itemsPerPage);
-    }, [filteredBikes, isHomePage, visibleCount, currentPage, itemsPerPage]);
+        return sortedBikes.slice(startIndex, startIndex + itemsPerPage);
+    }, [sortedBikes, isHomePage, visibleCount, currentPage, itemsPerPage]);
 
     const renderPagination = () => {
         if (totalPages <= 1) return null;
@@ -321,11 +356,11 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
 
                 <div className="text-center my-4">
                     <h4 className="fw-normal text-dark">
-                        Có <b className="fw-bold">{filteredBikes.length}</b> kết quả tìm kiếm phù hợp
+                        Có <b className="fw-bold">{sortedBikes.length}</b> kết quả tìm kiếm phù hợp
                     </h4>
                 </div>
 
-                {filteredBikes.length > 0 ? (
+                {sortedBikes.length > 0 ? (
                     <>
                         <div className="row g-4">
                             {paginatedBikes.map((bike: any) => (
@@ -358,7 +393,7 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
                         <BikeCard key={bike.id} bike={bike} onDetailClick={onSelectBike} />
                     ))}
                 </div>
-                {visibleCount < filteredBikes.length && (
+                {visibleCount < sortedBikes.length && (
                     <div className="text-center mt-4">
                         <button
                             className="btn btn-outline-dark px-4 py-2 fw-semibold rounded-3 shadow-sm"
@@ -546,7 +581,7 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
                     <div className="p-3 rounded">
                         <h4 className="fw-bold text-dark text-uppercase mb-3">{getTitle()}</h4>
                         <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-2 border-top">
-                            <div className="d-flex align-items-center gap-3">
+                            <div className="d-flex flex-wrap align-items-center gap-3">
                                 <span className="fw-semibold text-secondary small">Xếp theo:</span>
                                 <div className="form-check form-check-inline m-0">
                                     <input
@@ -554,8 +589,9 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
                                         type="radio"
                                         name="sortOptions"
                                         id="sortNew"
+                                        value="newest"
                                         checked={sortBy === 'newest'}
-                                        onChange={() => setSortBy('newest')}
+                                        onChange={(e) => handleSortChange(e.target.value)}
                                     />
                                     <label className="form-check-label small" htmlFor="sortNew">Hàng mới</label>
                                 </div>
@@ -564,9 +600,22 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
                                         className="form-check-input"
                                         type="radio"
                                         name="sortOptions"
+                                        id="sortBestSelling"
+                                        value="best-selling"
+                                        checked={sortBy === 'best-selling'}
+                                        onChange={(e) => handleSortChange(e.target.value)}
+                                    />
+                                    <label className="form-check-label small" htmlFor="sortBestSelling">Bán chạy</label>
+                                </div>
+                                <div className="form-check form-check-inline m-0">
+                                    <input
+                                        className="form-check-input"
+                                        type="radio"
+                                        name="sortOptions"
                                         id="sortAsc"
+                                        value="price-asc"
                                         checked={sortBy === 'price-asc'}
-                                        onChange={() => setSortBy('price-asc')}
+                                        onChange={(e) => handleSortChange(e.target.value)}
                                     />
                                     <label className="form-check-label small" htmlFor="sortAsc">Giá thấp đến cao</label>
                                 </div>
@@ -576,8 +625,9 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
                                         type="radio"
                                         name="sortOptions"
                                         id="sortDesc"
+                                        value="price-desc"
                                         checked={sortBy === 'price-desc'}
-                                        onChange={() => setSortBy('price-desc')}
+                                        onChange={(e) => handleSortChange(e.target.value)}
                                     />
                                     <label className="form-check-label small" htmlFor="sortDesc">Giá cao xuống thấp</label>
                                 </div>
@@ -585,7 +635,7 @@ export default function BikeList({ selectedCategory = 'Tất cả', searchKeywor
                         </div>
                     </div>
 
-                    {filteredBikes.length > 0 ? (
+                    {sortedBikes.length > 0 ? (
                         <>
                             <div className="row g-4">
                                 {paginatedBikes.map((bike: any) => (
