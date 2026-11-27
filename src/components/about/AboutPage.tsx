@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface PageProps {
     onGoHome: () => void;
@@ -183,15 +184,28 @@ function FAQContent() {
 
 function ContactContent() {
     const { showToast } = useToast();
+    const { user } = useAuth() as { user?: { name?: string; email?: string; phone?: string } | null };
+
     const [formData, setFormData] = useState({
-        fullName: '',
-        email: '',
-        phone: '',
+        fullName: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
         subject: '',
         message: ''
     });
 
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+    useEffect(() => {
+        if (user) {
+            setFormData((prev) => ({
+                ...prev,
+                fullName: user.name || prev.fullName,
+                email: user.email || prev.email,
+                phone: user.phone || prev.phone
+            }));
+        }
+    }, [user]);
 
     const validateForm = () => {
         const newErrors: { [key: string]: string } = {};
@@ -225,7 +239,13 @@ function ContactContent() {
         e.preventDefault();
         if (validateForm()) {
             showToast('Gửi thông tin liên hệ thành công! Chúng tôi sẽ phản hồi sớm nhất.', 'success');
-            setFormData({ fullName: '', email: '', phone: '', subject: '', message: '' });
+            setFormData({
+                fullName: user?.name || '',
+                email: user?.email || '',
+                phone: user?.phone || '',
+                subject: '',
+                message: ''
+            });
             setErrors({});
         } else {
             showToast('Vui lòng kiểm tra lại thông tin nhập trên form!', 'danger');
